@@ -1,6 +1,7 @@
-from dataclasses import fields, dataclass, MISSING
-from .rpc_session import RpcCommand, Empty
+from dataclasses import MISSING, dataclass, fields
 from typing import Literal, overload
+
+from .rpc_session import Empty, RpcCommand
 
 type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]
 _dataclass = dataclass(frozen=True, kw_only=True)
@@ -38,8 +39,8 @@ class Block(RpcCommand, rpc_output_type=Empty):
     :param group_ids: Group ID
     """
 
-    recipients: tuple[str, ...] | None = ()
-    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] = ()
+    group_ids: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -63,7 +64,7 @@ class GetAttachment(RpcCommand, rpc_output_type=Empty):
     Retrieve an already downloaded attachment base64 encoded.
 
     Note:
-     - Exactly one of :attr:`group_id` or :attr:`recipient` is required.
+     - Exactly one of :attr:`recipient` or :attr:`group_id` is required.
 
     :param id: The ID of the attachment file.
     :param recipient: Sender of the attachment
@@ -75,15 +76,17 @@ class GetAttachment(RpcCommand, rpc_output_type=Empty):
     group_id: str | None = None
 
     @overload
-    def __init__(self, *, id: str, group_id: str): ...
-
-    @overload
     def __init__(self, *, id: str, recipient: str): ...
 
+    @overload
+    def __init__(self, *, id: str, group_id: str): ...
+
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"group_id", "recipient"})):
+        match len(kwargs.keys() & (args := {"recipient", "group_id"})):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -98,7 +101,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
 
     Note:
-     - Exactly one of :attr:`group_id`, :attr:`contact`, or :attr:`profile` is required.
+     - Exactly one of :attr:`group_id`, :attr:`profile`, or :attr:`contact` is required.
 
     :param contact: Get a contact avatar
     :param profile: Get a profile avatar
@@ -113,15 +116,17 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
     def __init__(self, *, group_id: str): ...
 
     @overload
-    def __init__(self, *, contact: str): ...
-
-    @overload
     def __init__(self, *, profile: str): ...
 
+    @overload
+    def __init__(self, *, contact: str): ...
+
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"group_id", "contact", "profile"})):
+        match len(kwargs.keys() & (args := {"group_id", "profile", "contact"})):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -152,8 +157,8 @@ class GetUserStatus(RpcCommand, rpc_output_type=Empty):
     :param usernames: Specify the recipient username or username link.
     """
 
-    recipients: tuple[str, ...] | None = ()
-    usernames: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] = ()
+    usernames: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -181,7 +186,7 @@ class ListContacts(RpcCommand, rpc_output_type=Empty):
     :param internal: Include internal information that's normally not user visible
     """
 
-    recipients: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] = ()
     all_recipients: bool = False
     blocked: bool | None = None
     name: str | None = None
@@ -207,7 +212,7 @@ class ListGroups(RpcCommand, rpc_output_type=Empty):
     """
 
     detailed: bool = False
-    group_ids: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -241,7 +246,7 @@ class QuitGroup(RpcCommand, rpc_output_type=Empty):
 
     group_id: str
     delete: bool = False
-    admins: tuple[str, ...] | None = ()
+    admins: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -257,9 +262,9 @@ class RemoteDelete(RpcCommand, rpc_output_type=Empty):
     """
 
     target_timestamp: int
-    group_ids: tuple[str, ...] | None = ()
-    recipients: tuple[str, ...] | None = ()
-    usernames: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] = ()
+    recipients: tuple[str, ...] = ()
+    usernames: tuple[str, ...] = ()
     note_to_self: bool = False
 
 
@@ -290,7 +295,9 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
     def __init__(self, *, recipient: str | None = ..., forget: Literal[True]): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"hide", "forget"})):
             case 0 | 1:
@@ -360,23 +367,23 @@ class Send(RpcCommand, rpc_output_type=Empty):
         recipient or group to send an edited message.
     """
 
-    recipients: tuple[str, ...] | None = ()
-    group_ids: tuple[str, ...] | None = ()
-    usernames: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] = ()
+    group_ids: tuple[str, ...] = ()
+    usernames: tuple[str, ...] = ()
     note_to_self: bool = False
     notify_self: bool = False
     message: str | None = None
-    attachments: tuple[str, ...] | None = ()
+    attachments: tuple[str, ...] = ()
     view_once: bool = False
     end_session: bool = False
-    mentions: tuple[str, ...] | None = ()
-    text_styles: tuple[str, ...] | None = ()
+    mentions: tuple[str, ...] = ()
+    text_styles: tuple[str, ...] = ()
     quote_timestamp: int | None = None
     quote_author: str | None = None
     quote_message: str | None = None
-    quote_mentions: tuple[str, ...] | None = ()
-    quote_attachments: tuple[str, ...] | None = ()
-    quote_text_styles: tuple[str, ...] | None = ()
+    quote_mentions: tuple[str, ...] = ()
+    quote_attachments: tuple[str, ...] = ()
+    quote_text_styles: tuple[str, ...] = ()
     sticker: str | None = None
     preview_url: str | None = None
     preview_title: str | None = None
@@ -406,9 +413,9 @@ class SendMessageRequestResponse(RpcCommand, rpc_output_type=Empty):
     """
 
     type: Literal[("accept", "delete")]
-    group_ids: tuple[str, ...] | None = ()
-    recipients: tuple[str, ...] | None = ()
-    usernames: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] = ()
+    recipients: tuple[str, ...] = ()
+    usernames: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -445,9 +452,9 @@ class SendReaction(RpcCommand, rpc_output_type=Empty):
     emoji: str
     target_author: str
     target_timestamp: int
-    group_ids: tuple[str, ...] | None = ()
-    recipients: tuple[str, ...] | None = ()
-    usernames: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] = ()
+    recipients: tuple[str, ...] = ()
+    usernames: tuple[str, ...] = ()
     note_to_self: bool = False
     remove: bool = False
     story: bool = False
@@ -487,8 +494,8 @@ class SendTyping(RpcCommand, rpc_output_type=Empty):
     :param stop: Send a typing STOP message.
     """
 
-    group_ids: tuple[str, ...] | None = ()
-    recipients: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] = ()
+    recipients: tuple[str, ...] = ()
     stop: bool = False
 
 
@@ -540,7 +547,7 @@ class Trust(RpcCommand, rpc_output_type=Empty):
     Set the trust level of a given number.
 
     Note:
-     - :attr:`verified_safety_number` and :attr:`trust_all_known_keys` are mutually exclusive.
+     - :attr:`trust_all_known_keys` and :attr:`verified_safety_number` are mutually exclusive.
 
     :param recipient: Specify the phone number, for which to set the trust.
     :param trust_all_known_keys: Trust all known keys of this user, only use this for testing.
@@ -556,15 +563,19 @@ class Trust(RpcCommand, rpc_output_type=Empty):
     def __init__(self, *, recipient: str): ...
 
     @overload
-    def __init__(self, *, recipient: str, verified_safety_number: str): ...
-
-    @overload
     def __init__(self, *, recipient: str, trust_all_known_keys: Literal[True]): ...
 
+    @overload
+    def __init__(self, *, recipient: str, verified_safety_number: str): ...
+
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"verified_safety_number", "trust_all_known_keys"})):
+        match len(
+            kwargs.keys() & (args := {"trust_all_known_keys", "verified_safety_number"})
+        ):
             case 0 | 1:
                 pass
             case _:
@@ -580,8 +591,8 @@ class Unblock(RpcCommand, rpc_output_type=Empty):
     :param group_ids: Group ID
     """
 
-    recipients: tuple[str, ...] | None = ()
-    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] = ()
+    group_ids: tuple[str, ...] = ()
 
 
 @_dataclass
@@ -654,7 +665,9 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     ): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"delete_username", "username"})):
             case 0 | 1:
@@ -733,12 +746,12 @@ class UpdateGroup(RpcCommand, rpc_output_type=Empty):
     name: str | None = None
     description: str | None = None
     avatar: str | None = None
-    members: tuple[str, ...] | None = ()
-    remove_members: tuple[str, ...] | None = ()
-    admins: tuple[str, ...] | None = ()
-    remove_admins: tuple[str, ...] | None = ()
-    bans: tuple[str, ...] | None = ()
-    unbans: tuple[str, ...] | None = ()
+    members: tuple[str, ...] = ()
+    remove_members: tuple[str, ...] = ()
+    admins: tuple[str, ...] = ()
+    remove_admins: tuple[str, ...] = ()
+    bans: tuple[str, ...] = ()
+    unbans: tuple[str, ...] = ()
     reset_link: bool = False
     link: Literal[("enabled", "enabled-with-approval", "disabled")] | None = None
     set_permission_add_member: Literal[("every-member", "only-admins")] | None = None
@@ -808,7 +821,9 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     ): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+        self.__dict__.update(
+            {f.name: f.default for f in fields(self) if f.default != MISSING}
+        )
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"avatar", "remove_avatar"})):
             case 0 | 1:
@@ -827,3 +842,4 @@ class UploadStickerPack(RpcCommand, rpc_output_type=Empty):
     """
 
     path: str | None = None
+

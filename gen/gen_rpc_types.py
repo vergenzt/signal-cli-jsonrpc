@@ -1,5 +1,6 @@
-import ast
+import ast as a
 from pathlib import Path
+from subprocess import check_output as sh
 from typing import cast
 
 from ast_grep_py import SgNode, SgRoot
@@ -12,19 +13,23 @@ JAVA_JSON_TYPE_FILES = sorted(
 
 
 def main():
-    print(ast.unparse(gen()))
+    py_ast = gen()
+    py_src = a.unparse(py_ast)
+    py_src = sh(["ruff", "format", "-"], text=True, input=py_src)
+    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], text=True, input=py_src)
+    print(py_src)
 
 
-def gen() -> ast.Module:
+def gen() -> a.Module:
     py_imports = PyImports()
 
-    py_dataclass = ast.Assign(
-        [ast.Name("_dataclass")],
-        ast.Call(
+    py_dataclass = a.Assign(
+        [a.Name("_dataclass")],
+        a.Call(
             func=py_imports.add("dataclasses", "dataclass"),
             keywords=[
-                ast.keyword("frozen", ast.Constant(True)),
-                ast.keyword("kw_only", ast.Constant(True)),
+                a.keyword("frozen", a.Constant(True)),
+                a.keyword("kw_only", a.Constant(True)),
             ],
         ),
         lineno=0,
@@ -40,26 +45,25 @@ def gen() -> ast.Module:
     ]
 
     py_import_decls = [
-        ast.ImportFrom(mod, [ast.alias(n) for n in names], level=0)
-        for mod, names in py_imports.items()
+        a.ImportFrom(mod, [a.alias(n) for n in names], level=0) for mod, names in py_imports.items()
     ]
 
-    py_body = list[ast.stmt]()
+    py_body = list[a.stmt]()
     py_body.extend(py_import_decls)
     py_body.append(py_dataclass)
     py_body.extend(py_decls)
-    return ast.Module(py_body)
+    return a.Module(py_body)
 
 
-def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | None:
-    py_type_decos = tuple[ast.expr]()
+def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None:
+    py_type_decos = tuple[a.expr]()
     py_type_name = val(java_decl_n.field("name")).text().removeprefix("Json")
-    py_bases = tuple[ast.expr]()
-    py_body = tuple[ast.stmt]()
+    py_bases = tuple[a.expr]()
+    py_body = tuple[a.stmt]()
 
     match java_decl_n.kind():
         case "record_declaration":
-            py_type_decos = (ast.Name("_dataclass"),)
+            py_type_decos = (a.Name("_dataclass"),)
             py_body = tuple(
                 sorted(
                     [
@@ -68,7 +72,7 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | No
                             SgNode.is_named, val(java_decl_n.field("parameters")).children()
                         )
                     ],
-                    key=lambda ann_assign: cast(ast.AnnAssign, ann_assign).target is not None,
+                    key=lambda ann_assign: cast(a.AnnAssign, ann_assign).target is not None,
                 )
             )
             if java_decl_body := java_decl_n.field("body"):
@@ -83,9 +87,9 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | No
             py_type_decos = ()
             py_bases = (py_imports.add("enum", "StrEnum"),)
             py_body = tuple(
-                ast.Assign(
-                    [ast.Name(val(enum_member.field("name")).text())],
-                    ast.Call(py_imports.add("enum", "auto"), []),
+                a.Assign(
+                    [a.Name(val(enum_member.field("name")).text())],
+                    a.Call(py_imports.add("enum", "auto"), []),
                     lineno=0,
                 )
                 for enum_member in val(java_decl_n.field("body")).children()
@@ -101,7 +105,7 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | No
             )
 
     return (
-        ast.ClassDef(
+        a.ClassDef(
             decorator_list=list(py_type_decos),
             name=py_type_name,
             bases=list(py_bases),
@@ -112,13 +116,13 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | No
     )
 
 
-def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> ast.AnnAssign:
+def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> a.AnnAssign:
     java_param_name = val(java_param.field("name")).text()
     java_param_type_node = val(java_param.field("type"))
 
     py_param_name = java_param_name.removeprefix("Json")
     py_param_type_node = get_py_type(java_param_type_node, py_imports)
-    py_assign_tgt: ast.expr | None = None
+    py_assign_tgt: a.expr | None = None
 
     if (
         next(filter(SgNode.is_named, java_param.children())).text()
@@ -126,23 +130,23 @@ def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> ast.AnnAssig
     ):
         # include a falsy default if field might be omitted
         match py_param_type_node:
-            case ast.BinOp(_, ast.BitOr(), ast.Constant(None)):
-                py_assign_tgt = ast.Constant(None)
-            case ast.Subscript(ast.Name("tuple"), _):
-                py_assign_tgt = ast.Tuple([])
+            case a.BinOp(_, a.BitOr(), a.Constant(None)):
+                py_assign_tgt = a.Constant(None)
+            case a.Subscript(a.Name("tuple"), _):
+                py_assign_tgt = a.Tuple([])
 
-    return ast.AnnAssign(
-        target=ast.Name(id=py_param_name),
+    return a.AnnAssign(
+        target=a.Name(id=py_param_name),
         annotation=py_param_type_node,
         value=py_assign_tgt,
         simple=1,
     )
 
 
-def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> ast.expr:
+def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> a.expr:
     java_type_s = java_type_n.text()
     if java_type_s == "byte[]":
-        return ast.Name("bytes")
+        return a.Name("bytes")
 
     elif java_type_n.kind() == "generic_type":
         java_gentype_n, java_type_params = java_type_n.children()
@@ -153,9 +157,9 @@ def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> ast.expr:
                 # -> result is same type as the type param
                 return get_py_type(java_gentypeparam_n, py_imports)
             case "List":
-                return ast.Subscript(
-                    ast.Name("tuple"),
-                    ast.Tuple([get_py_type(java_gentypeparam_n, py_imports), ast.Constant(...)]),
+                return a.Subscript(
+                    a.Name("tuple"),
+                    a.Tuple([get_py_type(java_gentypeparam_n, py_imports), a.Constant(...)]),
                 )
             case _:
                 raise NotImplementedError(f"Unhandled Java generic type: {java_gentype_s}")
@@ -163,22 +167,24 @@ def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> ast.expr:
     else:
         match java_type_s:
             case "String":
-                py_type_n = ast.Name("str")
+                py_type_n = a.Name("str")
             case "int" | "long" | "Integer" | "Long":
-                py_type_n = ast.Name("int")
+                py_type_n = a.Name("int")
             case "Float":
-                py_type_n = ast.Name("float")
+                py_type_n = a.Name("float")
             case "boolean" | "Boolean":
-                py_type_n = ast.Name("bool")
-            case _ if java_type_s.startswith("Json"):
-                py_type_n = ast.Name(java_type_s.removeprefix("Json"))
-            case _:
+                py_type_n = a.Name("bool")
+            case _ if java_type_n.kind() == "type_identifier":
                 # assume an unknown identifier is another type we're defining
-                py_type_n = ast.Name(java_type_s)
+                py_type_n = a.Name(java_type_s.removeprefix("Json"))
+            case _:
+                raise NotImplementedError(
+                    f"Unhandled Java type of kind {java_type_n.kind()}: {java_type_s}"
+                )
 
         # java types beginning with a capital letter are object types and may be null
         if java_type_s[0].isupper():
-            return ast.BinOp(py_type_n, ast.BitOr(), ast.Constant(None))
+            return a.BinOp(py_type_n, a.BitOr(), a.Constant(None))
         else:
             return py_type_n
 

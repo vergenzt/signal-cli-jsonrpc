@@ -388,3 +388,4 @@ class TypingMessage:
     action: str | None
     timestamp: int
     groupId: str | None = None
+

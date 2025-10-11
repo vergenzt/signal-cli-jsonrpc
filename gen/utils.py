@@ -2,7 +2,6 @@ import ast as a
 import builtins as b
 from collections import defaultdict
 from copy import copy
-from dataclasses import dataclass
 from functools import partial
 from textwrap import wrap
 from typing import Literal, Sequence

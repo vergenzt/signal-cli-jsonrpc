@@ -5,6 +5,7 @@ from functools import reduce
 from itertools import product, takewhile
 from operator import or_
 from pathlib import Path
+from subprocess import check_output as sh
 from textwrap import dedent, indent
 from typing import Iterator, cast
 
@@ -28,7 +29,11 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
 
 
 def main():
-    print(a.unparse(gen()))
+    py_ast = gen()
+    py_src = a.unparse(py_ast)
+    py_src = sh(["ruff", "format", "-"], text=True, input=py_src)
+    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], text=True, input=py_src)
+    print(py_src)
 
 
 def gen() -> a.Module:
@@ -201,7 +206,31 @@ def get_py_class_body(
     # sort args names so that args without defaults come first
     py_arg_names_ordered = sorted(py_args.keys(), key=lambda n: py_args[n].value is not None)
 
-    # format and yield docstring if present
+    if py_class_doc := get_py_class_docstring(
+        py_cmd_help, py_mutex_groups, py_arg_helps, py_arg_names_ordered
+    ):
+        yield py_class_doc
+
+    # emit the argument (i.e. dataclass field) definitions
+    yield from (py_args[name] for name in py_arg_names_ordered)
+
+    # if there are mutex groups, then:
+    #  a) overload __init__ methods to provide type hints, and
+    #  b) validate mutual exclusions at runtime in __post_init__.
+    if py_mutex_groups:
+        yield from get_py_class_init_overloads(
+            py_arg_names_ordered, py_args, py_arg_groups, py_imports
+        )
+
+        yield get_py_class_init_impl(py_mutex_groups, py_imports)
+
+
+def get_py_class_docstring(
+    py_cmd_help: str | None,
+    py_mutex_groups: ...,
+    py_arg_helps: dict[str, str],
+    py_arg_names_ordered: list[str],
+) -> a.stmt | None:
     if py_cmd_help or py_mutex_groups or py_arg_helps:
         help_paras: list[str] = []
 
@@ -234,20 +263,7 @@ def get_py_class_body(
             help_paras.append(py_args_help)
 
         py_class_help = "\n" + "\n\n".join(filter(None, help_paras)) + "\n"
-        yield a.Expr(a.Constant(indent(py_class_help, " " * 4) + " " * 4))
-
-    # emit the argument (i.e. dataclass field) definitions
-    yield from (py_args[name] for name in py_arg_names_ordered)
-
-    # if there are mutex groups, then:
-    #  a) overload __init__ methods to provide type hints, and
-    #  b) validate mutual exclusions at runtime in __post_init__.
-    if py_mutex_groups:
-        yield from get_py_class_init_overloads(
-            py_arg_names_ordered, py_args, py_arg_groups, py_imports
-        )
-
-        yield get_py_class_init_impl(py_mutex_groups, py_imports)
+        return a.Expr(a.Constant(indent(py_class_help, " " * 4) + " " * 4))
 
 
 def get_py_class_init_overloads(
@@ -400,6 +416,7 @@ def get_py_arg_decl(
                 py_arg_annot = a.Subscript(
                     a.Name("tuple"), a.Tuple([py_arg_annot, a.Constant(...)])
                 )
+                py_arg_can_be_none = False
                 py_arg_value = a.Tuple([])
                 java_arg_addl_calls = rest
             case {"nargs": '"+"', **rest}:
