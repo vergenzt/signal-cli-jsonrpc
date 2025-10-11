@@ -1,217 +1,187 @@
-from ast import AnnAssign, Constant, Name, Subscript, expr, unparse
+import ast
 from pathlib import Path
+from typing import cast
 
-from ast_grep_py import Relation, Rule, SgNode, SgRoot
+from ast_grep_py import SgNode, SgRoot
 
-from .utils import val
-
+from .utils import PyImports, val
 
 JAVA_JSON_TYPE_FILES = sorted(
     Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/json/*.java")
 )
 
 
-def gen():
-    print("from dataclasses import MISSING, dataclass, fields")
-    print("from typing import Literal, Optional, overload")
-    print()
-    print()
-
-    for file in JAVA_JSON_TYPE_FILES:
-        process_file(SgRoot(file.read_text(), "java").root())
+def main():
+    print(ast.unparse(gen()))
 
 
-def process_file(root: SgNode):
-    rec_decl = root.find(
-        kind="record_declaration",
-        all=[
-            Rule(has=Relation(field="name", pattern="$NAME", regex="^Json")),
-            Rule(has=Relation(field="parameters", pattern="$RECORD_FIELDS")),
-            Rule(has=Relation(field="body", pattern="$BODY")),
-        ],
+def gen() -> ast.Module:
+    py_imports = PyImports()
+
+    py_dataclass = ast.Assign(
+        [ast.Name("_dataclass")],
+        ast.Call(
+            func=py_imports.add("dataclasses", "dataclass"),
+            keywords=[
+                ast.keyword("frozen", ast.Constant(True)),
+                ast.keyword("kw_only", ast.Constant(True)),
+            ],
+        ),
+        lineno=0,
     )
-    if not rec_decl:
-        return
 
-    name = val(rec_decl["NAME"]).text().removeprefix("Json")
-    params = [transform_param(p) for p in val(rec_decl["RECORD_FIELDS"]).children()]
+    py_decls = [
+        py_decl
+        for file in JAVA_JSON_TYPE_FILES
+        if (java_prog_n := SgRoot(file.read_text(), "java").root())
+        for java_n in java_prog_n.children()
+        if java_n.kind() not in ("package_declaration", "import_declaration")
+        if (py_decl := get_py_decl(java_n, py_imports))
+    ]
+
+    py_import_decls = [
+        ast.ImportFrom(mod, [ast.alias(n) for n in names], level=0)
+        for mod, names in py_imports.items()
+    ]
+
+    py_body = list[ast.stmt]()
+    py_body.extend(py_import_decls)
+    py_body.append(py_dataclass)
+    py_body.extend(py_decls)
+    return ast.Module(py_body)
 
 
-def transform_param(formal_param: SgNode) -> AnnAssign:
-    java_name = val(formal_param.field("name")).text()
-    java_type_node = val(formal_param.field("type"))
+def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> ast.ClassDef | None:
+    py_type_decos = tuple[ast.expr]()
+    py_type_name = val(java_decl_n.field("name")).text().removeprefix("Json")
+    py_bases = tuple[ast.expr]()
+    py_body = tuple[ast.stmt]()
 
-    if formal_param.has(kind="modifiers") and val(formal_param.child(0)).text() == "@JsonInclude(JsonInclude.Include.NON_NULL)":
-        py_default_node = Constant(None)
+    match java_decl_n.kind():
+        case "record_declaration":
+            py_type_decos = (ast.Name("_dataclass"),)
+            py_body = tuple(
+                sorted(
+                    [
+                        get_py_param_decl(java_param, py_imports)
+                        for java_param in filter(
+                            SgNode.is_named, val(java_decl_n.field("parameters")).children()
+                        )
+                    ],
+                    key=lambda ann_assign: cast(ast.AnnAssign, ann_assign).target is not None,
+                )
+            )
+            if java_decl_body := java_decl_n.field("body"):
+                py_body = py_body + tuple(
+                    py_decl
+                    for decl in java_decl_body.children()
+                    if decl.kind().removesuffix("_declaration") in ("record", "enum")
+                    if (py_decl := get_py_decl(decl, py_imports))
+                )
+
+        case "enum_declaration":
+            py_type_decos = ()
+            py_bases = (py_imports.add("enum", "StrEnum"),)
+            py_body = tuple(
+                ast.Assign(
+                    [ast.Name(val(enum_member.field("name")).text())],
+                    ast.Call(py_imports.add("enum", "auto"), []),
+                    lineno=0,
+                )
+                for enum_member in val(java_decl_n.field("body")).children()
+                if enum_member.kind() == "enum_constant"
+            )
+
+        case "class_declaration":
+            pass
+
+        case _:
+            raise NotImplementedError(
+                f"Unhandled declaration type `{java_decl_n.kind()}`: {java_decl_n.text()}"
+            )
+
+    return (
+        ast.ClassDef(
+            decorator_list=list(py_type_decos),
+            name=py_type_name,
+            bases=list(py_bases),
+            body=list(py_body),
+        )
+        if py_body
+        else None
+    )
+
+
+def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> ast.AnnAssign:
+    java_param_name = val(java_param.field("name")).text()
+    java_param_type_node = val(java_param.field("type"))
+
+    py_param_name = java_param_name.removeprefix("Json")
+    py_param_type_node = get_py_type(java_param_type_node, py_imports)
+    py_assign_tgt: ast.expr | None = None
+
+    if (
+        next(filter(SgNode.is_named, java_param.children())).text()
+        == "@JsonInclude(JsonInclude.Include.NON_NULL)"
+    ):
+        # include a falsy default if field might be omitted
+        match py_param_type_node:
+            case ast.BinOp(_, ast.BitOr(), ast.Constant(None)):
+                py_assign_tgt = ast.Constant(None)
+            case ast.Subscript(ast.Name("tuple"), _):
+                py_assign_tgt = ast.Tuple([])
+
+    return ast.AnnAssign(
+        target=ast.Name(id=py_param_name),
+        annotation=py_param_type_node,
+        value=py_assign_tgt,
+        simple=1,
+    )
+
+
+def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> ast.expr:
+    java_type_s = java_type_n.text()
+    if java_type_s == "byte[]":
+        return ast.Name("bytes")
+
+    elif java_type_n.kind() == "generic_type":
+        java_gentype_n, java_type_params = java_type_n.children()
+        [java_gentypeparam_n] = filter(SgNode.is_named, java_type_params.children())
+        match java_gentype_s := java_gentype_n.text():
+            case "Optional":
+                # Java `Optional` type params are always objects, and can always be nullable
+                # -> result is same type as the type param
+                return get_py_type(java_gentypeparam_n, py_imports)
+            case "List":
+                return ast.Subscript(
+                    ast.Name("tuple"),
+                    ast.Tuple([get_py_type(java_gentypeparam_n, py_imports), ast.Constant(...)]),
+                )
+            case _:
+                raise NotImplementedError(f"Unhandled Java generic type: {java_gentype_s}")
+
     else:
-        py_default_node = None
+        match java_type_s:
+            case "String":
+                py_type_n = ast.Name("str")
+            case "int" | "long" | "Integer" | "Long":
+                py_type_n = ast.Name("int")
+            case "Float":
+                py_type_n = ast.Name("float")
+            case "boolean" | "Boolean":
+                py_type_n = ast.Name("bool")
+            case _ if java_type_s.startswith("Json"):
+                py_type_n = ast.Name(java_type_s.removeprefix("Json"))
+            case _:
+                # assume an unknown identifier is another type we're defining
+                py_type_n = ast.Name(java_type_s)
 
-    py_name = java_name.removeprefix("Json")
-    py_type_node = transform_type(java_type_node)
-    return AnnAssign(target=Name(id=py_name), annotation=py_type_node, value=py_default_node, simple=1)
+        # java types beginning with a capital letter are object types and may be null
+        if java_type_s[0].isupper():
+            return ast.BinOp(py_type_n, ast.BitOr(), ast.Constant(None))
+        else:
+            return py_type_n
 
-
-def transform_type(java_type_node: SgNode) -> expr:
-    if java_type_node.text() == "byte[]":
-        return Name("bytes")
-
-    match java_type_node.kind(), java_type_node.text():
-        case "type_identifier", java_type:
-            py_type = Name(next(v for k, v in {
-                ("String",): "str",
-                ("int", "long", "Integer", "Long"): "int",
-                ("Float",): "float",
-                ("boolean", "Boolean"): "bool",
-            }.items() if java_type in k))
-            return py_type if java_type[0].islower() else Subscript(Name("Optional"), py_type)
-
-        case "generic_type", _:
-            
-
-
-# - { id: bytes, rule: { pattern: 'byte[]' }, fix: bytes }
-# - { id: ints-or-longs, rule: { regex: '^(int|long)$' }, fix: int }
-# - { id: ints-or-longs-nullable, rule: { regex: '^(Integer|Long)$' }, fix: 'Optional[int]' }
-# - { id: float, rule: { regex: '^Float$' }, fix: float }
-# - { id: boolean, rule: { regex: '^([Bb]oolean)$' }, fix: bool }
-
-# - id: list-or-set
-#   rule:
-#     any:
-#     - pattern: List<$TYPE>
-#     - pattern: Set<$TYPE>
-#   transform: *rewrite-type
-#   fix: 'list[$PY_TYPE]'
-
-# - id: optional
-#   rule:
-#     pattern: Optional<$TYPE>
-#   transform: *rewrite-type
-#   fix: '$PY_TYPE | None'
-
-
-    return AnnAssign(
-        Name(id=java_name.removeprefix("Json")),
-        Name(id=
-
-    )
-
-#     kind: formal_parameter
-#     all:
-#     - has: { field: type, pattern: $TYPE }
-#     - has: { field: name, pattern: $NAME }
-#     - any:
-#       - has: { stopBy: end, kind: annotation, regex: '^@JsonInclude\(JsonInclude\.Include\.NON_NULL\)$', pattern: $OPTIONAL }
-#       - pattern: $_
-
-
-# - id: record
-#   rule:
-#     kind: record_declaration
-#     all:
-#     - has: { field: name, pattern: $TYPE }
-#     - has: { field: parameters, pattern: $RECORD_FIELDS }
-#     - has: { field: body, pattern: $BODY }
-#   transform:
-#     PY_TYPE: &strip-leading-json
-#       replace:
-#         source: $TYPE
-#         replace: '^Json'
-#         by: ''
-#     PY_RECORD_FIELDS:
-#       rewrite:
-#         source: $RECORD_FIELDS
-#         rewriters: [record_field]
-#         joinBy: "\n"
-#     PY_BODY:
-#       rewrite:
-#         source: $BODY
-#         rewriters: *prog-rewriters
-#         joinBy: ""
-#   fix: |-
-
-#     @dataclass
-#     class $PY_TYPE:
-#         $PY_RECORD_FIELDS
-#     $PY_BODY
-
-# - id: record_field
-#   rule:
-#     kind: formal_parameter
-#     all:
-#     - has: { field: type, pattern: $TYPE }
-#     - has: { field: name, pattern: $NAME }
-#     - any:
-#       - has: { stopBy: end, kind: annotation, regex: '^@JsonInclude\(JsonInclude\.Include\.NON_NULL\)$', pattern: $OPTIONAL }
-#       - pattern: $_
-#   fix: |-
-#     $NAME: $PY_TYPE
-#   transform: &rewrite-type
-#     PY_TYPE:
-#       rewrite:
-#         source: $TYPE
-#         rewriters:
-#         - strip-leading-json
-#         - string
-#         - bytes
-#         - ints-or-longs
-#         - ints-or-longs-nullable
-#         - float
-#         - boolean
-#         - list-or-set
-#         - optional
-
-# - id: strip-leading-json
-#   rule: { regex: '^Json', pattern: '$TYPE' }
-#   transform:
-#     PY_TYPE: *strip-leading-json
-#   fix: $PY_TYPE
-
-# - { id: string, rule: { regex: '^String$' }, fix: 'Optional[str]' }
-# - { id: bytes, rule: { pattern: 'byte[]' }, fix: bytes }
-# - { id: ints-or-longs, rule: { regex: '^(int|long)$' }, fix: int }
-# - { id: ints-or-longs-nullable, rule: { regex: '^(Integer|Long)$' }, fix: 'Optional[int]' }
-# - { id: float, rule: { regex: '^Float$' }, fix: float }
-# - { id: boolean, rule: { regex: '^([Bb]oolean)$' }, fix: bool }
-
-# - id: list-or-set
-#   rule:
-#     any:
-#     - pattern: List<$TYPE>
-#     - pattern: Set<$TYPE>
-#   transform: *rewrite-type
-#   fix: 'list[$PY_TYPE]'
-
-# - id: optional
-#   rule:
-#     pattern: Optional<$TYPE>
-#   transform: *rewrite-type
-#   fix: '$PY_TYPE | None'
-
-# - id: enum
-#   rule:
-#     kind: enum_declaration
-#     all:
-#     - has: { field: name, pattern: $TYPE }
-#     - has: { field: body, pattern: $BODY }
-#   transform:
-#     PY_TYPE: *strip-leading-json
-#     PY_ENUM_MEMBERS:
-#       rewrite:
-#         source: $BODY
-#         rewriters: [enum-member]
-#         joinBy: "\n"
-#   fix: |
-
-#     class $PY_TYPE(StrEnum):
-#         $PY_ENUM_MEMBERS
-
-# - id: enum-member
-#   rule:
-#     kind: enum_constant
-#     pattern: $MEMBER_NAME
-#   fix: |-
-#     $MEMBER_NAME = auto()
 
 if __name__ == "__main__":
     main()

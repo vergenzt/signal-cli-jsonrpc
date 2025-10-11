@@ -1,283 +1,282 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
-from enum import StrEnum, auto
-from typing import Optional
+from enum import auto, StrEnum
+
+_dataclass = dataclass(frozen=True, kw_only=True)
 
 
-@dataclass
+@_dataclass
 class Attachment:
-    contentType: Optional[str]
-    filename: Optional[str]
-    id: Optional[str]
-    size: Optional[int]
-    width: Optional[int]
-    height: Optional[int]
-    caption: Optional[str]
-    uploadTimestamp: Optional[int]
+    contentType: str | None
+    filename: str | None
+    id: str | None
+    size: int | None
+    width: int | None
+    height: int | None
+    caption: str | None
+    uploadTimestamp: int | None
 
 
-@dataclass
+@_dataclass
 class AttachmentData:
-    data: Optional[str]
+    data: str | None
 
 
-@dataclass
+@_dataclass
 class CallMessage:
-    offerMessage: Offer
-    answerMessage: Answer
-    busyMessage: Busy
-    hangupMessage: Hangup
-    iceUpdateMessages: list[IceUpdate]
+    offerMessage: Offer | None = None
+    answerMessage: Answer | None = None
+    busyMessage: Busy | None = None
+    hangupMessage: Hangup | None = None
+    iceUpdateMessages: tuple[IceUpdate | None, ...]
 
-    @dataclass
+    @_dataclass
     class Offer:
         id: int
-        type: Optional[str]
-        opaque: Optional[str]
+        type: str | None
+        opaque: str | None
 
-    @dataclass
+    @_dataclass
     class Answer:
         id: int
-        opaque: Optional[str]
+        opaque: str | None
 
-    @dataclass
+    @_dataclass
     class Busy:
         id: int
 
-    @dataclass
+    @_dataclass
     class Hangup:
         id: int
-        type: Optional[str]
+        type: str | None
         deviceId: int
 
-    @dataclass
+    @_dataclass
     class IceUpdate:
         id: int
-        opaque: Optional[str]
+        opaque: str | None
 
 
-@dataclass
+@_dataclass
 class Contact:
-    number: Optional[str]
-    uuid: Optional[str]
-    username: Optional[str]
-    name: Optional[str]
-    givenName: Optional[str]
-    familyName: Optional[str]
-    nickName: Optional[str]
-    nickGivenName: Optional[str]
-    nickFamilyName: Optional[str]
-    note: Optional[str]
-    color: Optional[str]
+    number: str | None
+    uuid: str | None
+    username: str | None
+    name: str | None
+    givenName: str | None
+    familyName: str | None
+    nickName: str | None
+    nickGivenName: str | None
+    nickFamilyName: str | None
+    note: str | None
+    color: str | None
     isBlocked: bool
     isHidden: bool
     messageExpirationTime: int
     profileSharing: bool
     unregistered: bool
-    profile: Profile
-    internal: Internal
+    profile: Profile | None
+    internal: Internal | None = None
 
-    @dataclass
+    @_dataclass
     class Profile:
         lastUpdateTimestamp: int
-        givenName: Optional[str]
-        familyName: Optional[str]
-        about: Optional[str]
-        aboutEmoji: Optional[str]
+        givenName: str | None
+        familyName: str | None
+        about: str | None
+        aboutEmoji: str | None
         hasAvatar: bool
-        mobileCoinAddress: Optional[str]
+        mobileCoinAddress: str | None
 
-    @dataclass
+    @_dataclass
     class Internal:
-        capabilities: list[Optional[str]]
-        unidentifiedAccessMode: Optional[str]
-        sharesPhoneNumber: bool
-        discoverableByPhonenumber: bool
+        capabilities: tuple[str | None, ...]
+        unidentifiedAccessMode: str | None
+        sharesPhoneNumber: bool | None
+        discoverableByPhonenumber: bool | None
 
 
-@dataclass
+@_dataclass
 class ContactAddress:
-    type: Optional[str]
-    label: Optional[str]
-    street: Optional[str]
-    pobox: Optional[str]
-    neighborhood: Optional[str]
-    city: Optional[str]
-    region: Optional[str]
-    postcode: Optional[str]
-    country: Optional[str]
+    type: str | None
+    label: str | None
+    street: str | None
+    pobox: str | None
+    neighborhood: str | None
+    city: str | None
+    region: str | None
+    postcode: str | None
+    country: str | None
 
 
-@dataclass
+@_dataclass
 class ContactAvatar:
-    attachment: Attachment
+    attachment: Attachment | None
     isProfile: bool
 
 
-@dataclass
+@_dataclass
 class ContactEmail:
-    value: Optional[str]
-    type: Optional[str]
-    label: Optional[str]
+    value: str | None
+    type: str | None
+    label: str | None
 
 
-@dataclass
+@_dataclass
 class ContactName:
-    nickname: Optional[str]
-    given: Optional[str]
-    family: Optional[str]
-    prefix: Optional[str]
-    suffix: Optional[str]
-    middle: Optional[str]
+    nickname: str | None
+    given: str | None
+    family: str | None
+    prefix: str | None
+    suffix: str | None
+    middle: str | None
 
 
-@dataclass
+@_dataclass
 class ContactPhone:
-    value: Optional[str]
-    type: Optional[str]
-    label: Optional[str]
+    value: str | None
+    type: str | None
+    label: str | None
 
 
-@dataclass
+@_dataclass
 class DataMessage:
     timestamp: int
-    message: Optional[str]
-    expiresInSeconds: Optional[int]
-    viewOnce: bool
-    reaction: Reaction
-    quote: Quote
-    payment: Payment
-    mentions: list[Mention]
-    previews: list[Preview]
-    attachments: list[Attachment]
-    sticker: Sticker
-    remoteDelete: RemoteDelete
-    contacts: list[SharedContact]
-    textStyles: list[TextStyle]
-    groupInfo: GroupInfo
-    storyContext: StoryContext
+    message: str | None
+    expiresInSeconds: int | None
+    viewOnce: bool | None = None
+    reaction: Reaction | None = None
+    quote: Quote | None = None
+    payment: Payment | None = None
+    mentions: tuple[Mention | None, ...] = ()
+    previews: tuple[Preview | None, ...] = ()
+    attachments: tuple[Attachment | None, ...] = ()
+    sticker: Sticker | None = None
+    remoteDelete: RemoteDelete | None = None
+    contacts: tuple[SharedContact | None, ...] = ()
+    textStyles: tuple[TextStyle | None, ...] = ()
+    groupInfo: GroupInfo | None = None
+    storyContext: StoryContext | None = None
 
 
-@dataclass
+@_dataclass
 class EditMessage:
     targetSentTimestamp: int
-    dataMessage: DataMessage
+    dataMessage: DataMessage | None
 
 
-@dataclass
+@_dataclass
 class Error:
-    message: Optional[str]
-    type: Optional[str]
+    message: str | None
+    type: str | None
 
 
-@dataclass
+@_dataclass
 class GroupInfo:
-    groupId: Optional[str]
-    groupName: Optional[str]
+    groupId: str | None
+    groupName: str | None
     revision: int
-    type: Optional[str]
+    type: str | None
 
 
-@dataclass
+@_dataclass
 class Mention:
-    name: Optional[str]
-    number: Optional[str]
-    uuid: Optional[str]
+    name: str | None
+    number: str | None
+    uuid: str | None
     start: int
     length: int
 
 
-@dataclass
+@_dataclass
 class MessageEnvelope:
-    source: Optional[str]
-    sourceNumber: Optional[str]
-    sourceUuid: Optional[str]
-    sourceName: Optional[str]
-    sourceDevice: Optional[int]
+    source: str | None
+    sourceNumber: str | None
+    sourceUuid: str | None
+    sourceName: str | None
+    sourceDevice: int | None
     timestamp: int
     serverReceivedTimestamp: int
     serverDeliveredTimestamp: int
-    dataMessage: DataMessage
-    editMessage: EditMessage
-    storyMessage: StoryMessage
-    syncMessage: SyncMessage
-    callMessage: CallMessage
-    receiptMessage: ReceiptMessage
-    typingMessage: TypingMessage
+    dataMessage: DataMessage | None = None
+    editMessage: EditMessage | None = None
+    storyMessage: StoryMessage | None = None
+    syncMessage: SyncMessage | None = None
+    callMessage: CallMessage | None = None
+    receiptMessage: ReceiptMessage | None = None
+    typingMessage: TypingMessage | None = None
 
 
-@dataclass
+@_dataclass
 class Payment:
-    note: Optional[str]
+    note: str | None
     receipt: bytes
 
 
-@dataclass
+@_dataclass
 class Preview:
-    url: Optional[str]
-    title: Optional[str]
-    description: Optional[str]
-    image: Attachment
+    url: str | None
+    title: str | None
+    description: str | None
+    image: Attachment | None
 
 
-@dataclass
+@_dataclass
 class Quote:
     id: int
-    author: Optional[str]
-    authorNumber: Optional[str]
-    authorUuid: Optional[str]
-    text: Optional[str]
-    mentions: list[Mention]
-    attachments: list[QuotedAttachment]
-    textStyles: list[TextStyle]
+    author: str | None
+    authorNumber: str | None
+    authorUuid: str | None
+    text: str | None
+    mentions: tuple[Mention | None, ...] = ()
+    attachments: tuple[QuotedAttachment | None, ...]
+    textStyles: tuple[TextStyle | None, ...] = ()
 
 
-@dataclass
+@_dataclass
 class QuotedAttachment:
-    contentType: Optional[str]
-    filename: Optional[str]
-    thumbnail: Attachment
+    contentType: str | None
+    filename: str | None
+    thumbnail: Attachment | None = None
 
 
-@dataclass
+@_dataclass
 class Reaction:
-    emoji: Optional[str]
-    targetAuthor: Optional[str]
-    targetAuthorNumber: Optional[str]
-    targetAuthorUuid: Optional[str]
+    emoji: str | None
+    targetAuthor: str | None
+    targetAuthorNumber: str | None
+    targetAuthorUuid: str | None
     targetSentTimestamp: int
     isRemove: bool
 
 
-@dataclass
+@_dataclass
 class ReceiptMessage:
     when: int
     isDelivery: bool
     isRead: bool
     isViewed: bool
-    timestamps: list[Optional[int]]
+    timestamps: tuple[int | None, ...]
 
 
-@dataclass
+@_dataclass
 class RecipientAddress:
-    uuid: Optional[str]
-    number: Optional[str]
-    username: Optional[str]
+    uuid: str | None
+    number: str | None
+    username: str | None
 
 
-@dataclass
+@_dataclass
 class RemoteDelete:
     timestamp: int
 
 
-@dataclass
+@_dataclass
 class SendMessageResult:
-    recipientAddress: RecipientAddress
-    groupId: Optional[str]
-    type: Type
-    token: Optional[str]
-    retryAfterSeconds: Optional[int]
+    recipientAddress: RecipientAddress | None
+    groupId: str | None = None
+    type: Type | None
+    token: str | None = None
+    retryAfterSeconds: int | None = None
 
     class Type(StrEnum):
         SUCCESS = auto()
@@ -288,62 +287,62 @@ class SendMessageResult:
         INVALID_PRE_KEY_FAILURE = auto()
 
 
-@dataclass
+@_dataclass
 class SharedContact:
-    name: ContactName
-    avatar: ContactAvatar
-    phone: list[ContactPhone]
-    email: list[ContactEmail]
-    address: list[ContactAddress]
-    organization: Optional[str]
+    name: ContactName | None
+    avatar: ContactAvatar | None = None
+    phone: tuple[ContactPhone | None, ...] = ()
+    email: tuple[ContactEmail | None, ...] = ()
+    address: tuple[ContactAddress | None, ...] = ()
+    organization: str | None
 
 
-@dataclass
+@_dataclass
 class Sticker:
-    packId: Optional[str]
+    packId: str | None
     stickerId: int
 
 
-@dataclass
+@_dataclass
 class StoryContext:
-    authorNumber: Optional[str]
-    authorUuid: Optional[str]
+    authorNumber: str | None
+    authorUuid: str | None
     sentTimestamp: int
 
 
-@dataclass
+@_dataclass
 class StoryMessage:
     allowsReplies: bool
-    groupId: Optional[str]
-    fileAttachment: Attachment
-    textAttachment: TextAttachment
+    groupId: str | None = None
+    fileAttachment: Attachment | None = None
+    textAttachment: TextAttachment | None = None
 
-    @dataclass
+    @_dataclass
     class TextAttachment:
-        text: Optional[str]
-        style: Optional[str]
-        textForegroundColor: Optional[str]
-        textBackgroundColor: Optional[str]
-        preview: Preview
-        backgroundGradient: Gradient
-        backgroundColor: Optional[str]
+        text: str | None
+        style: str | None = None
+        textForegroundColor: str | None = None
+        textBackgroundColor: str | None = None
+        preview: Preview | None = None
+        backgroundGradient: Gradient | None = None
+        backgroundColor: str | None = None
 
-        @dataclass
+        @_dataclass
         class Gradient:
-            startColor: Optional[str]
-            endColor: Optional[str]
-            colors: list[Optional[str]]
-            positions: list[float]
-            angle: Optional[int]
+            startColor: str | None
+            endColor: str | None
+            colors: tuple[str | None, ...]
+            positions: tuple[float | None, ...]
+            angle: int | None
 
 
-@dataclass
+@_dataclass
 class SyncDataMessage:
-    destination: Optional[str]
-    destinationNumber: Optional[str]
-    destinationUuid: Optional[str]
-    editMessage: EditMessage
-    dataMessage: DataMessage
+    destination: str | None
+    destinationNumber: str | None
+    destinationUuid: str | None
+    editMessage: EditMessage | None = None
+    dataMessage: DataMessage | None
 
 
 class SyncMessageType(StrEnum):
@@ -352,40 +351,40 @@ class SyncMessageType(StrEnum):
     REQUEST_SYNC = auto()
 
 
-@dataclass
+@_dataclass
 class SyncMessage:
-    sentMessage: SyncDataMessage
-    sentStoryMessage: SyncStoryMessage
-    blockedNumbers: list[Optional[str]]
-    blockedGroupIds: list[Optional[str]]
-    readMessages: list[SyncReadMessage]
-    type: SyncMessageType
+    sentMessage: SyncDataMessage | None = None
+    sentStoryMessage: SyncStoryMessage | None = None
+    blockedNumbers: tuple[str | None, ...] = ()
+    blockedGroupIds: tuple[str | None, ...] = ()
+    readMessages: tuple[SyncReadMessage | None, ...] = ()
+    type: SyncMessageType | None = None
 
 
-@dataclass
+@_dataclass
 class SyncReadMessage:
-    sender: Optional[str]
-    senderNumber: Optional[str]
-    senderUuid: Optional[str]
+    sender: str | None
+    senderNumber: str | None
+    senderUuid: str | None
     timestamp: int
 
 
-@dataclass
+@_dataclass
 class SyncStoryMessage:
-    destinationNumber: Optional[str]
-    destinationUuid: Optional[str]
-    dataMessage: StoryMessage
+    destinationNumber: str | None
+    destinationUuid: str | None
+    dataMessage: StoryMessage | None
 
 
-@dataclass
+@_dataclass
 class TextStyle:
-    style: Optional[str]
+    style: str | None
     start: int
     length: int
 
 
-@dataclass
+@_dataclass
 class TypingMessage:
-    action: Optional[str]
+    action: str | None
     timestamp: int
-    groupId: Optional[str]
+    groupId: str | None = None
