@@ -1,13 +1,12 @@
-from dataclasses import MISSING, dataclass, fields
-from typing import Literal, Optional, overload
-
-from . import Contact
-from .rpc_session import Empty, RpcCommand
+from dataclasses import fields, dataclass, MISSING
+from .rpc_session import RpcCommand, Empty
+from typing import Literal, overload
 
 type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]
+_dataclass = dataclass(frozen=True, kw_only=True)
 
 
-@dataclass(frozen=True, kw_only=True)
+@_dataclass
 class AddDevice(RpcCommand, rpc_output_type=Empty):
     """
     Link another device to this device. Only works, if this is the primary device.
@@ -16,10 +15,9 @@ class AddDevice(RpcCommand, rpc_output_type=Empty):
     """
 
     uri: str
-    "Specify the uri contained in the QR code shown by the new device."
 
 
-@dataclass(frozen=True, kw_only=True)
+@_dataclass
 class AddStickerPack(RpcCommand, rpc_output_type=Empty):
     """
     Install a sticker pack for this account.
@@ -29,14 +27,10 @@ class AddStickerPack(RpcCommand, rpc_output_type=Empty):
     """
 
     uris: NonEmptyTuple[str]
-    """
-    Specify the uri of the sticker pack. (e.g.
-    https://signal.art/addstickers/#pack_id=XXX&pack_key=XXX)
-    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class Block(RpcCommand):
+@_dataclass
+class Block(RpcCommand, rpc_output_type=Empty):
     """
     Block the given contacts or groups (no messages will be received)
 
@@ -44,14 +38,12 @@ class Block(RpcCommand):
     :param group_ids: Group ID
     """
 
-    recipients: tuple[str, ...] = ()
-    "Contact number"
-    group_ids: tuple[str, ...] = ()
-    "Group ID"
+    recipients: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class FinishChangeNumber(RpcCommand):
+@_dataclass
+class FinishChangeNumber(RpcCommand, rpc_output_type=Empty):
     """
     Verify the new number using the code received via SMS or voice.
 
@@ -61,17 +53,17 @@ class FinishChangeNumber(RpcCommand):
     """
 
     number: str
-    "The new phone number in E164 format."
     verification_code: str
-    "The verification code you received via sms or voice call."
-    pin: Optional[str] = None
-    "The registration lock PIN, that was set by the user (Optional)"
+    pin: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class GetAttachment(RpcCommand):
+@_dataclass
+class GetAttachment(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve an already downloaded attachment base64 encoded.
+
+    Note:
+     - Exactly one of :attr:`group_id` or :attr:`recipient` is required.
 
     :param id: The ID of the attachment file.
     :param recipient: Sender of the attachment
@@ -79,46 +71,46 @@ class GetAttachment(RpcCommand):
     """
 
     id: str
-    "The ID of the attachment file."
-    recipient: Optional[str] = None
-    "Sender of the attachment"
-    group_id: Optional[str] = None
-    "Group in which the attachment was received"
-
-    @overload
-    def __init__(self, *, id: str, recipient: str): ...
+    recipient: str | None = None
+    group_id: str | None = None
 
     @overload
     def __init__(self, *, id: str, group_id: str): ...
 
+    @overload
+    def __init__(self, *, id: str, recipient: str): ...
+
     def __init__(self, **kwargs):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"recipient", "group_id"})):
+        match len(kwargs.keys() & (args := {"group_id", "recipient"})):
             case 0:
-                raise ValueError(f"One of {args} is required!")
+                raise ValueError(f"One of {args!r} is required!")
             case 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class GetAvatar(RpcCommand):
+@_dataclass
+class GetAvatar(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
+
+    Note:
+     - Exactly one of :attr:`group_id`, :attr:`contact`, or :attr:`profile` is required.
 
     :param contact: Get a contact avatar
     :param profile: Get a profile avatar
     :param group_id: Get a group avatar
     """
 
-    contact: Optional[str] = None
-    "Get a contact avatar"
-    profile: Optional[str] = None
-    "Get a profile avatar"
-    group_id: Optional[str] = None
-    "Get a group avatar"
+    contact: str | None = None
+    profile: str | None = None
+    group_id: str | None = None
+
+    @overload
+    def __init__(self, *, group_id: str): ...
 
     @overload
     def __init__(self, *, contact: str): ...
@@ -126,23 +118,20 @@ class GetAvatar(RpcCommand):
     @overload
     def __init__(self, *, profile: str): ...
 
-    @overload
-    def __init__(self, *, group_id: str): ...
-
     def __init__(self, **kwargs):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"contact", "profile", "group_id"})):
+        match len(kwargs.keys() & (args := {"group_id", "contact", "profile"})):
             case 0:
-                raise ValueError(f"One of {args} is required!")
+                raise ValueError(f"One of {args!r} is required!")
             case 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class GetSticker(RpcCommand):
+@_dataclass
+class GetSticker(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve the sticker of a sticker pack base64 encoded.
 
@@ -151,13 +140,11 @@ class GetSticker(RpcCommand):
     """
 
     pack_id: str
-    "The ID of the sticker pack."
     sticker_id: int
-    "The ID of the sticker."
 
 
-@dataclass(frozen=True, kw_only=True)
-class GetUserStatus(RpcCommand):
+@_dataclass
+class GetUserStatus(RpcCommand, rpc_output_type=Empty):
     """
     Check if the specified phone number/s have been registered
 
@@ -165,14 +152,12 @@ class GetUserStatus(RpcCommand):
     :param usernames: Specify the recipient username or username link.
     """
 
-    recipients: tuple[str, ...] = ()
-    "Phone number"
-    usernames: tuple[str, ...] = ()
-    "Specify the recipient username or username link."
+    recipients: tuple[str, ...] | None = ()
+    usernames: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class JoinGroup(RpcCommand):
+@_dataclass
+class JoinGroup(RpcCommand, rpc_output_type=Empty):
     """
     Join a group via an invitation link.
 
@@ -180,44 +165,39 @@ class JoinGroup(RpcCommand):
     """
 
     uri: str
-    "Specify the uri with the group invitation link."
 
 
-@dataclass(frozen=True, kw_only=True)
-class ListContacts(RpcCommand, rpc_result_type=list[Contact]):
+@_dataclass
+class ListContacts(RpcCommand, rpc_output_type=Empty):
     """
     Show a list of known contacts with names and profiles.
 
+    :param recipients: Specify one ore more phone numbers to show.
+    :param all_recipients: Include all known recipients, not only contacts.
     :param blocked: Specify if only blocked or unblocked contacts should be shown
         (default: all contacts)
     :param name: Find contacts with the given contact or profile name.
-    :param recipients: Specify one ore more phone numbers to show.
-    :param all_recipients: Include all known recipients, not only contacts.
     :param detailed: List the contacts with more details. If output=json, then this is always set
     :param internal: Include internal information that's normally not user visible
     """
 
-    blocked: Optional[bool] = None
-    "Specify if only blocked or unblocked contacts should be shown (default: all contacts)"
-    name: Optional[str] = None
-    "Find contacts with the given contact or profile name."
-    recipients: tuple[str, ...] = ()
-    "Specify one ore more phone numbers to show."
+    recipients: tuple[str, ...] | None = ()
     all_recipients: bool = False
-    "Include all known recipients, not only contacts."
+    blocked: bool | None = None
+    name: str | None = None
     detailed: bool = False
-    "List the contacts with more details. If output=json, then this is always set"
     internal: bool = False
-    "Include internal information that's normally not user visible"
 
 
-@dataclass(frozen=True, kw_only=True)
-class ListDevices(RpcCommand):
-    "Show a list of linked devices."
+@_dataclass
+class ListDevices(RpcCommand, rpc_output_type=Empty):
+    """
+    Show a list of linked devices.
+    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class ListGroups(RpcCommand):
+@_dataclass
+class ListGroups(RpcCommand, rpc_output_type=Empty):
     """
     List group information including names, ids, active status, blocked status and members
 
@@ -227,30 +207,29 @@ class ListGroups(RpcCommand):
     """
 
     detailed: bool = False
-    "List the members and group invite links of each group. If output=json, then this is always set"
-    group_ids: tuple[str, ...] = ()
-    "Specify one or more group IDs to show."
+    group_ids: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class ListIdentities(RpcCommand):
+@_dataclass
+class ListIdentities(RpcCommand, rpc_output_type=Empty):
     """
     List all known identity keys and their trust status, fingerprint and safety number.
 
     :param number: Only show identity keys for the given phone number.
     """
 
-    number: Optional[str] = None
-    "Only show identity keys for the given phone number."
+    number: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class ListStickerPacks(RpcCommand):
-    "Show a list of known sticker packs."
+@_dataclass
+class ListStickerPacks(RpcCommand, rpc_output_type=Empty):
+    """
+    Show a list of known sticker packs.
+    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class QuitGroup(RpcCommand):
+@_dataclass
+class QuitGroup(RpcCommand, rpc_output_type=Empty):
     """
     Send a quit group message to all group members and remove self from member list.
 
@@ -261,15 +240,12 @@ class QuitGroup(RpcCommand):
     """
 
     group_id: str
-    "Specify the recipient group ID."
     delete: bool = False
-    "Delete local group data completely after quitting group."
-    admins: tuple[str, ...] = ()
-    "Specify one or more members to make a group admin, required if you're currently the only admin."
+    admins: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class RemoteDelete(RpcCommand):
+@_dataclass
+class RemoteDelete(RpcCommand, rpc_output_type=Empty):
     """
     Remotely delete a previously sent message.
 
@@ -277,60 +253,54 @@ class RemoteDelete(RpcCommand):
     :param group_ids: Specify the recipient group ID.
     :param recipients: Specify the recipients' phone number.
     :param usernames: Specify the recipient username or username link.
-    :param note_to_self: None
+    :param note_to_self:
     """
 
     target_timestamp: int
-    "Specify the timestamp of the message to delete."
-    group_ids: tuple[str, ...] = ()
-    "Specify the recipient group ID."
-    recipients: tuple[str, ...] = ()
-    "Specify the recipients' phone number."
-    usernames: tuple[str, ...] = ()
-    "Specify the recipient username or username link."
+    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] | None = ()
+    usernames: tuple[str, ...] | None = ()
     note_to_self: bool = False
 
 
-@dataclass(frozen=True, kw_only=True)
-class RemoveContact(RpcCommand):
+@_dataclass
+class RemoveContact(RpcCommand, rpc_output_type=Empty):
     """
     Remove the details of a given contact
+
+    Note:
+     - :attr:`hide` and :attr:`forget` are mutually exclusive.
 
     :param recipient: Contact number
     :param hide: Hide the contact in the contact list, but keep the data.
     :param forget: Delete all data associated with this contact, including identity keys and sessions.
     """
 
-    recipient: Optional[str] = None
-    "Contact number"
+    recipient: str | None = None
     hide: bool = False
-    "Hide the contact in the contact list, but keep the data."
     forget: bool = False
-    "Delete all data associated with this contact, including identity keys and sessions."
 
     @overload
-    def __init__(self, *, recipient: Optional[str] = None): ...
+    def __init__(self, *, recipient: str | None = ...): ...
 
     @overload
-    def __init__(self, *, recipient: Optional[str] = None, hide: Literal[True]): ...
+    def __init__(self, *, recipient: str | None = ..., hide: Literal[True]): ...
 
     @overload
-    def __init__(self, *, recipient: Optional[str] = None, forget: Literal[True]): ...
+    def __init__(self, *, recipient: str | None = ..., forget: Literal[True]): ...
 
     def __init__(self, **kwargs):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"hide", "forget"})):
-            case 0:
-                raise ValueError(f"One of {args} is required!")
-            case 1:
+            case 0 | 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class RemoveDevice(RpcCommand):
+@_dataclass
+class RemoveDevice(RpcCommand, rpc_output_type=Empty):
     """
     Remove a linked device.
 
@@ -338,39 +308,26 @@ class RemoveDevice(RpcCommand):
     """
 
     device_id: int
-    "Specify the device you want to remove. Use listDevices to see the deviceIds."
 
 
-@dataclass(frozen=True, kw_only=True)
-class RemovePin(RpcCommand):
-    "Remove the registration lock pin."
+@_dataclass
+class RemovePin(RpcCommand, rpc_output_type=Empty):
+    """
+    Remove the registration lock pin.
+    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class Send(RpcCommand):
+@_dataclass
+class Send(RpcCommand, rpc_output_type=Empty):
     """
     Send a message to another user or group.
 
-    :param message: Specify the message to be sent.
-    :param quote_timestamp: Specify the timestamp of a previous message with the
-        recipient or group to add a quote to the new message.
-    :param quote_author: Specify the number of the author of the original message.
-    :param quote_message: Specify the message of the original message.
-    :param sticker: Send a sticker (syntax: stickerPackId:stickerId)
-    :param preview_url: Specify the url for the link preview (the same url must also
-        appear in the message body).
-    :param preview_title: Specify the title for the link preview (mandatory).
-    :param preview_description: Specify the description for the link preview (optional).
-    :param preview_image: Specify the image file for the link preview (optional).
-    :param story_timestamp: Specify the timestamp of a story to reply to.
-    :param story_author: Specify the number of the author of the story.
-    :param edit_timestamp: Specify the timestamp of a previous message with the
-        recipient or group to send an edited message.
     :param recipients: Specify the recipients' phone number.
     :param group_ids: Specify the recipient group ID.
     :param usernames: Specify the recipient username or username link.
     :param note_to_self: Send the message to self without notification.
     :param notify_self: If self is part of recipients/groups send a normal message, not a sync message.
+    :param message: Specify the message to be sent.
     :param attachments: Add an attachment. Can be either a file path or a data URI. Data URI
         encoded attachments must follow the RFC 2397. Additionally a file name can be added,
         e.g. data:<MIME-TYPE>;filename=<FILENAME>;base64,<BASE64 ENCODED DATA>.
@@ -381,93 +338,64 @@ class Send(RpcCommand):
         units, NOT Unicode code points.
     :param text_styles: Style parts of the message text (syntax: start:length:STYLE). Unit of
         start and length is UTF-16 code units, NOT Unicode code points.
+    :param quote_timestamp: Specify the timestamp of a previous message with the
+        recipient or group to add a quote to the new message.
+    :param quote_author: Specify the number of the author of the original message.
+    :param quote_message: Specify the message of the original message.
     :param quote_mentions: Quote with mention of another group member (syntax:
         start:length:recipientNumber)
     :param quote_attachments: Specify the attachments of the original message
         (syntax: contentType[:filename[:previewFile]]), e.g. 'audio/aac' or
         'image/png:test.png:/tmp/preview.jpg'.
     :param quote_text_styles: Quote with style parts of the message text (syntax: start:length:STYLE)
+    :param sticker: Send a sticker (syntax: stickerPackId:stickerId)
+    :param preview_url: Specify the url for the link preview (the same url must also
+        appear in the message body).
+    :param preview_title: Specify the title for the link preview (mandatory).
+    :param preview_description: Specify the description for the link preview (optional).
+    :param preview_image: Specify the image file for the link preview (optional).
+    :param story_timestamp: Specify the timestamp of a story to reply to.
+    :param story_author: Specify the number of the author of the story.
+    :param edit_timestamp: Specify the timestamp of a previous message with the
+        recipient or group to send an edited message.
     """
 
-    message: Optional[str] = None
-    "Specify the message to be sent."
-    quote_timestamp: Optional[int] = None
-    """
-    Specify the timestamp of a previous message with the recipient or
-    group to add a quote to the new message.
-    """
-    quote_author: Optional[str] = None
-    "Specify the number of the author of the original message."
-    quote_message: Optional[str] = None
-    "Specify the message of the original message."
-    sticker: Optional[str] = None
-    "Send a sticker (syntax: stickerPackId:stickerId)"
-    preview_url: Optional[str] = None
-    "Specify the url for the link preview (the same url must also appear in the message body)."
-    preview_title: Optional[str] = None
-    "Specify the title for the link preview (mandatory)."
-    preview_description: Optional[str] = None
-    "Specify the description for the link preview (optional)."
-    preview_image: Optional[str] = None
-    "Specify the image file for the link preview (optional)."
-    story_timestamp: Optional[int] = None
-    "Specify the timestamp of a story to reply to."
-    story_author: Optional[str] = None
-    "Specify the number of the author of the story."
-    edit_timestamp: Optional[int] = None
-    "Specify the timestamp of a previous message with the recipient or group to send an edited message."
-    recipients: tuple[str, ...] = ()
-    "Specify the recipients' phone number."
-    group_ids: tuple[str, ...] = ()
-    "Specify the recipient group ID."
-    usernames: tuple[str, ...] = ()
-    "Specify the recipient username or username link."
+    recipients: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] | None = ()
+    usernames: tuple[str, ...] | None = ()
     note_to_self: bool = False
-    "Send the message to self without notification."
     notify_self: bool = False
-    "If self is part of recipients/groups send a normal message, not a sync message."
-    attachments: tuple[str, ...] = ()
-    """
-    Add an attachment. Can be either a file path or a data URI. Data URI encoded
-    attachments must follow the RFC 2397. Additionally a file name can be added,
-    e.g. data:<MIME-TYPE>;filename=<FILENAME>;base64,<BASE64 ENCODED DATA>.
-    """
+    message: str | None = None
+    attachments: tuple[str, ...] | None = ()
     view_once: bool = False
-    "Send the message as a view once message"
     end_session: bool = False
-    "Clear session state and send end session message."
-    mentions: tuple[str, ...] = ()
-    """
-    Mention another group member (syntax: start:length:recipientNumber). Unit of
-    start and length is UTF-16 code units, NOT Unicode code points.
-    """
-    text_styles: tuple[str, ...] = ()
-    """
-    Style parts of the message text (syntax: start:length:STYLE). Unit of start and
-    length is UTF-16 code units, NOT Unicode code points.
-    """
-    quote_mentions: tuple[str, ...] = ()
-    """
-    Quote with mention of another group member (syntax:
-    start:length:recipientNumber)
-    """
-    quote_attachments: tuple[str, ...] = ()
-    """
-    Specify the attachments of the original message (syntax:
-    contentType[:filename[:previewFile]]), e.g. 'audio/aac' or
-    'image/png:test.png:/tmp/preview.jpg'.
-    """
-    quote_text_styles: tuple[str, ...] = ()
-    "Quote with style parts of the message text (syntax: start:length:STYLE)"
+    mentions: tuple[str, ...] | None = ()
+    text_styles: tuple[str, ...] | None = ()
+    quote_timestamp: int | None = None
+    quote_author: str | None = None
+    quote_message: str | None = None
+    quote_mentions: tuple[str, ...] | None = ()
+    quote_attachments: tuple[str, ...] | None = ()
+    quote_text_styles: tuple[str, ...] | None = ()
+    sticker: str | None = None
+    preview_url: str | None = None
+    preview_title: str | None = None
+    preview_description: str | None = None
+    preview_image: str | None = None
+    story_timestamp: int | None = None
+    story_author: str | None = None
+    edit_timestamp: int | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendContacts(RpcCommand):
-    "Send a synchronization message with the local contacts list to all linked devices."
+@_dataclass
+class SendContacts(RpcCommand, rpc_output_type=Empty):
+    """
+    Send a synchronization message with the local contacts list to all linked devices.
+    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendMessageRequestResponse(RpcCommand):
+@_dataclass
+class SendMessageRequestResponse(RpcCommand, rpc_output_type=Empty):
     """
     Send response to a message request to linked devices.
 
@@ -477,36 +405,29 @@ class SendMessageRequestResponse(RpcCommand):
     :param usernames: Specify the recipient username or username link.
     """
 
-    type: Literal["accept", "delete"]
-    "Type of message request response"
-    group_ids: tuple[str, ...] = ()
-    "Specify the recipient group ID."
-    recipients: tuple[str, ...] = ()
-    "Specify the recipients' phone number."
-    usernames: tuple[str, ...] = ()
-    "Specify the recipient username or username link."
+    type: Literal[("accept", "delete")]
+    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] | None = ()
+    usernames: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendPaymentNotification(RpcCommand):
+@_dataclass
+class SendPaymentNotification(RpcCommand, rpc_output_type=Empty):
     """
     Send a payment notification.
 
-    :param recipient: Specify the recipient's phone number.
     :param receipt: The base64 encoded receipt blob.
+    :param recipient: Specify the recipient's phone number.
     :param note: Specify a note for the payment notification.
     """
 
-    recipient: Optional[str] = None
-    "Specify the recipient's phone number."
     receipt: str
-    "The base64 encoded receipt blob."
-    note: Optional[str] = None
-    "Specify a note for the payment notification."
+    recipient: str | None = None
+    note: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendReaction(RpcCommand):
+@_dataclass
+class SendReaction(RpcCommand, rpc_output_type=Empty):
     """
     Send reaction to a previously received or sent message.
 
@@ -522,27 +443,18 @@ class SendReaction(RpcCommand):
     """
 
     emoji: str
-    "Specify the emoji, should be a single unicode grapheme cluster."
     target_author: str
-    "Specify the number of the author of the message to which to react."
     target_timestamp: int
-    "Specify the timestamp of the message to which to react."
-    group_ids: tuple[str, ...] = ()
-    "Specify the recipient group ID."
-    recipients: tuple[str, ...] = ()
-    "Specify the recipients' phone number."
-    usernames: tuple[str, ...] = ()
-    "Specify the recipient username or username link."
+    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] | None = ()
+    usernames: tuple[str, ...] | None = ()
     note_to_self: bool = False
-    "Send the reaction to self without notification."
     remove: bool = False
-    "Remove a reaction."
     story: bool = False
-    "React to a story instead of a normal message"
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendReceipt(RpcCommand):
+@_dataclass
+class SendReceipt(RpcCommand, rpc_output_type=Empty):
     """
     Send a read or viewed receipt to a previously received message.
 
@@ -553,20 +465,19 @@ class SendReceipt(RpcCommand):
     """
 
     recipient: str
-    "Specify the sender's phone number."
     target_timestamps: NonEmptyTuple[int]
-    "Specify the timestamp of the messages for which a receipt should be sent."
-    type: Optional[Literal["read", "viewed"]] = None
-    "Specify the receipt type (default is read receipt)."
+    type: Literal[("read", "viewed")] | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendSyncRequest(RpcCommand):
-    "Send a synchronization request message to primary device (for group, contacts, ...)."
+@_dataclass
+class SendSyncRequest(RpcCommand, rpc_output_type=Empty):
+    """
+    Send a synchronization request message to primary device (for group, contacts, ...).
+    """
 
 
-@dataclass(frozen=True, kw_only=True)
-class SendTyping(RpcCommand):
+@_dataclass
+class SendTyping(RpcCommand, rpc_output_type=Empty):
     """
     Send typing message to trigger a typing indicator for the recipient. Indicator
     will be shown for 15seconds unless a typing STOP message is sent first.
@@ -576,16 +487,13 @@ class SendTyping(RpcCommand):
     :param stop: Send a typing STOP message.
     """
 
-    group_ids: tuple[str, ...] = ()
-    "Specify the recipient group ID."
-    recipients: tuple[str, ...] = ()
-    "Specify the recipients' phone number."
+    group_ids: tuple[str, ...] | None = ()
+    recipients: tuple[str, ...] | None = ()
     stop: bool = False
-    "Send a typing STOP message."
 
 
-@dataclass(frozen=True, kw_only=True)
-class SetPin(RpcCommand):
+@_dataclass
+class SetPin(RpcCommand, rpc_output_type=Empty):
     """
     Set a registration lock pin, to prevent others from registering this number.
 
@@ -593,34 +501,27 @@ class SetPin(RpcCommand):
         registrations (resets after 7 days of inactivity)
     """
 
-    pin: Optional[str] = None
-    """
-    The registration lock PIN, that will be required for new registrations (resets
-    after 7 days of inactivity)
-    """
+    pin: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class StartChangeNumber(RpcCommand):
+@_dataclass
+class StartChangeNumber(RpcCommand, rpc_output_type=Empty):
     """
     Change account to a new phone number with SMS or voice verification.
 
     :param number: The new phone number in E164 format.
+    :param voice: The verification should be done over voice, not SMS.
     :param captcha: The captcha token, required if change number failed with a
         captcha required error.
-    :param voice: The verification should be done over voice, not SMS.
     """
 
     number: str
-    "The new phone number in E164 format."
-    captcha: Optional[str] = None
-    "The captcha token, required if change number failed with a captcha required error."
     voice: bool = False
-    "The verification should be done over voice, not SMS."
+    captcha: str | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class SubmitRateLimitChallenge(RpcCommand):
+@_dataclass
+class SubmitRateLimitChallenge(RpcCommand, rpc_output_type=Empty):
     """
     Submit a captcha challenge to lift the rate limit. This command should only be
     necessary when sending fails with a proof required error.
@@ -630,28 +531,26 @@ class SubmitRateLimitChallenge(RpcCommand):
     """
 
     challenge: str
-    "The challenge token taken from the proof required error."
     captcha: str
-    "The captcha token from the solved captcha on the signal website."
 
 
-@dataclass(frozen=True, kw_only=True)
-class Trust(RpcCommand):
+@_dataclass
+class Trust(RpcCommand, rpc_output_type=Empty):
     """
     Set the trust level of a given number.
 
+    Note:
+     - :attr:`verified_safety_number` and :attr:`trust_all_known_keys` are mutually exclusive.
+
     :param recipient: Specify the phone number, for which to set the trust.
+    :param trust_all_known_keys: Trust all known keys of this user, only use this for testing.
     :param verified_safety_number: Specify the safety number of the key, only use
         this option if you have verified the safety number.
-    :param trust_all_known_keys: Trust all known keys of this user, only use this for testing.
     """
 
     recipient: str
-    "Specify the phone number, for which to set the trust."
-    verified_safety_number: Optional[str] = None
-    "Specify the safety number of the key, only use this option if you have verified the safety number."
     trust_all_known_keys: bool = False
-    "Trust all known keys of this user, only use this for testing."
+    verified_safety_number: str | None = None
 
     @overload
     def __init__(self, *, recipient: str): ...
@@ -666,16 +565,14 @@ class Trust(RpcCommand):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"verified_safety_number", "trust_all_known_keys"})):
-            case 0:
-                raise ValueError(f"One of {args} is required!")
-            case 1:
+            case 0 | 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class Unblock(RpcCommand):
+@_dataclass
+class Unblock(RpcCommand, rpc_output_type=Empty):
     """
     Unblock the given contacts or groups (messages will be received again)
 
@@ -683,14 +580,12 @@ class Unblock(RpcCommand):
     :param group_ids: Group ID
     """
 
-    recipients: tuple[str, ...] = ()
-    "Contact number"
-    group_ids: tuple[str, ...] = ()
-    "Group ID"
+    recipients: tuple[str, ...] | None = ()
+    group_ids: tuple[str, ...] | None = ()
 
 
-@dataclass(frozen=True, kw_only=True)
-class Unregister(RpcCommand):
+@_dataclass
+class Unregister(RpcCommand, rpc_output_type=Empty):
     """
     Unregister the current device from the signal server.
 
@@ -699,13 +594,15 @@ class Unregister(RpcCommand):
     """
 
     delete_account: bool = False
-    "Delete account completely from server. CAUTION: Only do this if you won't use this number again!"
 
 
-@dataclass(frozen=True, kw_only=True)
-class UpdateAccount(RpcCommand):
+@_dataclass
+class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     """
     Update the account attributes on the signal server.
+
+    Note:
+     - :attr:`delete_username` and :attr:`username` are mutually exclusive.
 
     :param device_name: Specify a name to describe this device.
     :param unrestricted_unidentified_sender: Enable if anyone should be able to send
@@ -717,65 +614,57 @@ class UpdateAccount(RpcCommand):
     :param delete_username: Delete the username associated with this account.
     """
 
-    device_name: Optional[str] = None
-    "Specify a name to describe this device."
-    unrestricted_unidentified_sender: Optional[bool] = None
-    "Enable if anyone should be able to send you unidentified sender messages."
-    discoverable_by_number: Optional[bool] = None
-    "Enable/disable if the account should be discoverable by phone number"
-    number_sharing: Optional[bool] = None
-    "Indicates if Signal should share its phone number when sending a message."
-    username: Optional[str] = None
-    "Specify a username that can then be used to contact this account."
+    device_name: str | None = None
+    unrestricted_unidentified_sender: bool | None = None
+    discoverable_by_number: bool | None = None
+    number_sharing: bool | None = None
+    username: str | None = None
     delete_username: bool = False
-    "Delete the username associated with this account."
 
     @overload
     def __init__(
         self,
         *,
-        device_name: Optional[str] = None,
-        unrestricted_unidentified_sender: Optional[bool] = None,
-        discoverable_by_number: Optional[bool] = None,
-        number_sharing: Optional[bool] = None,
+        device_name: str | None = ...,
+        unrestricted_unidentified_sender: bool | None = ...,
+        discoverable_by_number: bool | None = ...,
+        number_sharing: bool | None = ...,
     ): ...
 
     @overload
     def __init__(
         self,
         *,
-        device_name: Optional[str] = None,
-        unrestricted_unidentified_sender: Optional[bool] = None,
-        discoverable_by_number: Optional[bool] = None,
-        number_sharing: Optional[bool] = None,
-        username: str,
-    ): ...
-
-    @overload
-    def __init__(
-        self,
-        *,
-        device_name: Optional[str] = None,
-        unrestricted_unidentified_sender: Optional[bool] = None,
-        discoverable_by_number: Optional[bool] = None,
-        number_sharing: Optional[bool] = None,
+        device_name: str | None = ...,
+        unrestricted_unidentified_sender: bool | None = ...,
+        discoverable_by_number: bool | None = ...,
+        number_sharing: bool | None = ...,
         delete_username: Literal[True],
+    ): ...
+
+    @overload
+    def __init__(
+        self,
+        *,
+        device_name: str | None = ...,
+        unrestricted_unidentified_sender: bool | None = ...,
+        discoverable_by_number: bool | None = ...,
+        number_sharing: bool | None = ...,
+        username: str,
     ): ...
 
     def __init__(self, **kwargs):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"username", "delete_username"})):
-            case 0:
-                raise ValueError(f"One of {args} is required!")
-            case 1:
+        match len(kwargs.keys() & (args := {"delete_username", "username"})):
+            case 0 | 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class UpdateConfiguration(RpcCommand):
+@_dataclass
+class UpdateConfiguration(RpcCommand, rpc_output_type=Empty):
     """
     Update signal configs and sync them to linked devices.
 
@@ -786,18 +675,14 @@ class UpdateConfiguration(RpcCommand):
     :param link_previews: Indicates if Signal should generate link previews.
     """
 
-    read_receipts: Optional[bool] = None
-    "Indicates if Signal should send read receipts."
-    unidentified_delivery_indicators: Optional[bool] = None
-    "Indicates if Signal should show unidentified delivery indicators."
-    typing_indicators: Optional[bool] = None
-    "Indicates if Signal should send/show typing indicators."
-    link_previews: Optional[bool] = None
-    "Indicates if Signal should generate link previews."
+    read_receipts: bool | None = None
+    unidentified_delivery_indicators: bool | None = None
+    typing_indicators: bool | None = None
+    link_previews: bool | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class UpdateContact(RpcCommand):
+@_dataclass
+class UpdateContact(RpcCommand, rpc_output_type=Empty):
     """
     Update the details of a given contact
 
@@ -811,26 +696,18 @@ class UpdateContact(RpcCommand):
     :param expiration: Set expiration time of messages (seconds)
     """
 
-    recipient: Optional[str] = None
-    "Contact number"
-    name: Optional[str] = None
-    "New contact name"
-    given_name: Optional[str] = None
-    "New system given name"
-    family_name: Optional[str] = None
-    "New system family name"
-    nick_given_name: Optional[str] = None
-    "New nick given name"
-    nick_family_name: Optional[str] = None
-    "New nick family name"
-    note: Optional[str] = None
-    "New note"
-    expiration: Optional[int] = None
-    "Set expiration time of messages (seconds)"
+    recipient: str | None = None
+    name: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    nick_given_name: str | None = None
+    nick_family_name: str | None = None
+    note: str | None = None
+    expiration: int | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class UpdateGroup(RpcCommand):
+@_dataclass
+class UpdateGroup(RpcCommand, rpc_output_type=Empty):
     """
     Create or update a group.
 
@@ -838,11 +715,6 @@ class UpdateGroup(RpcCommand):
     :param name: Specify the new group name.
     :param description: Specify the new group description.
     :param avatar: Specify a new group avatar image file
-    :param link: Set group link state, with or without admin approval
-    :param set_permission_add_member: Set permission to add new group members
-    :param set_permission_edit_details: Set permission to edit group details
-    :param set_permission_send_messages: Set permission to send messages
-    :param expiration: Set expiration time of messages (seconds)
     :param members: Specify one or more members to add to the group
     :param remove_members: Specify one or more members to remove from the group
     :param admins: Specify one or more members to make a group admin
@@ -850,46 +722,38 @@ class UpdateGroup(RpcCommand):
     :param bans: Specify one or more members to ban from joining the group
     :param unbans: Specify one or more members to remove from the ban list
     :param reset_link: Reset group link and create new link password
+    :param link: Set group link state, with or without admin approval
+    :param set_permission_add_member: Set permission to add new group members
+    :param set_permission_edit_details: Set permission to edit group details
+    :param set_permission_send_messages: Set permission to send messages
+    :param expiration: Set expiration time of messages (seconds)
     """
 
-    group_id: Optional[str] = None
-    "Specify the group ID."
-    name: Optional[str] = None
-    "Specify the new group name."
-    description: Optional[str] = None
-    "Specify the new group description."
-    avatar: Optional[str] = None
-    "Specify a new group avatar image file"
-    link: Optional[Literal["enabled", "enabled-with-approval", "disabled"]] = None
-    "Set group link state, with or without admin approval"
-    set_permission_add_member: Optional[Literal["every-member", "only-admins"]] = None
-    "Set permission to add new group members"
-    set_permission_edit_details: Optional[Literal["every-member", "only-admins"]] = None
-    "Set permission to edit group details"
-    set_permission_send_messages: Optional[Literal["every-member", "only-admins"]] = None
-    "Set permission to send messages"
-    expiration: Optional[int] = None
-    "Set expiration time of messages (seconds)"
-    members: tuple[str, ...] = ()
-    "Specify one or more members to add to the group"
-    remove_members: tuple[str, ...] = ()
-    "Specify one or more members to remove from the group"
-    admins: tuple[str, ...] = ()
-    "Specify one or more members to make a group admin"
-    remove_admins: tuple[str, ...] = ()
-    "Specify one or more members to remove group admin privileges"
-    bans: tuple[str, ...] = ()
-    "Specify one or more members to ban from joining the group"
-    unbans: tuple[str, ...] = ()
-    "Specify one or more members to remove from the ban list"
+    group_id: str | None = None
+    name: str | None = None
+    description: str | None = None
+    avatar: str | None = None
+    members: tuple[str, ...] | None = ()
+    remove_members: tuple[str, ...] | None = ()
+    admins: tuple[str, ...] | None = ()
+    remove_admins: tuple[str, ...] | None = ()
+    bans: tuple[str, ...] | None = ()
+    unbans: tuple[str, ...] | None = ()
     reset_link: bool = False
-    "Reset group link and create new link password"
+    link: Literal[("enabled", "enabled-with-approval", "disabled")] | None = None
+    set_permission_add_member: Literal[("every-member", "only-admins")] | None = None
+    set_permission_edit_details: Literal[("every-member", "only-admins")] | None = None
+    set_permission_send_messages: Literal[("every-member", "only-admins")] | None = None
+    expiration: int | None = None
 
 
-@dataclass(frozen=True, kw_only=True)
-class UpdateProfile(RpcCommand):
+@_dataclass
+class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     """
     Set a name, about and avatar image for the user profile
+
+    Note:
+     - :attr:`avatar` and :attr:`remove_avatar` are mutually exclusive.
 
     :param given_name: New profile (given) name
     :param family_name: New profile family name (optional)
@@ -897,43 +761,37 @@ class UpdateProfile(RpcCommand):
     :param about_emoji: New profile about emoji
     :param mobile_coin_address: New MobileCoin address (Base64 encoded public address)
     :param avatar: Path to new profile avatar
-    :param remove_avatar: None
+    :param remove_avatar:
     """
 
-    given_name: Optional[str] = None
-    "New profile (given) name"
-    family_name: Optional[str] = None
-    "New profile family name (optional)"
-    about: Optional[str] = None
-    "New profile about text"
-    about_emoji: Optional[str] = None
-    "New profile about emoji"
-    mobile_coin_address: Optional[str] = None
-    "New MobileCoin address (Base64 encoded public address)"
-    avatar: Optional[str] = None
-    "Path to new profile avatar"
+    given_name: str | None = None
+    family_name: str | None = None
+    about: str | None = None
+    about_emoji: str | None = None
+    mobile_coin_address: str | None = None
+    avatar: str | None = None
     remove_avatar: bool = False
 
     @overload
     def __init__(
         self,
         *,
-        given_name: Optional[str] = None,
-        family_name: Optional[str] = None,
-        about: Optional[str] = None,
-        about_emoji: Optional[str] = None,
-        mobile_coin_address: Optional[str] = None,
+        given_name: str | None = ...,
+        family_name: str | None = ...,
+        about: str | None = ...,
+        about_emoji: str | None = ...,
+        mobile_coin_address: str | None = ...,
     ): ...
 
     @overload
     def __init__(
         self,
         *,
-        given_name: Optional[str] = None,
-        family_name: Optional[str] = None,
-        about: Optional[str] = None,
-        about_emoji: Optional[str] = None,
-        mobile_coin_address: Optional[str] = None,
+        given_name: str | None = ...,
+        family_name: str | None = ...,
+        about: str | None = ...,
+        about_emoji: str | None = ...,
+        mobile_coin_address: str | None = ...,
         avatar: str,
     ): ...
 
@@ -941,11 +799,11 @@ class UpdateProfile(RpcCommand):
     def __init__(
         self,
         *,
-        given_name: Optional[str] = None,
-        family_name: Optional[str] = None,
-        about: Optional[str] = None,
-        about_emoji: Optional[str] = None,
-        mobile_coin_address: Optional[str] = None,
+        given_name: str | None = ...,
+        family_name: str | None = ...,
+        about: str | None = ...,
+        about_emoji: str | None = ...,
+        mobile_coin_address: str | None = ...,
         remove_avatar: Literal[True],
     ): ...
 
@@ -953,16 +811,14 @@ class UpdateProfile(RpcCommand):
         self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := {"avatar", "remove_avatar"})):
-            case 0:
-                raise ValueError(f"One of {args} is required!")
-            case 1:
+            case 0 | 1:
                 pass
             case _:
-                raise ValueError(f"Arguments {args} are mutually exclusive!")
+                raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@dataclass(frozen=True, kw_only=True)
-class UploadStickerPack(RpcCommand):
+@_dataclass
+class UploadStickerPack(RpcCommand, rpc_output_type=Empty):
     """
     Upload a new sticker pack, consisting of a manifest file and the stickers images.
 
@@ -970,10 +826,4 @@ class UploadStickerPack(RpcCommand):
         pack you wish to upload.
     """
 
-    path: Optional[str] = None
-    "The path of the manifest.json or a zip file containing the sticker pack you wish to upload."
-
-
-@dataclass(frozen=True, kw_only=True)
-class Version(RpcCommand):
-    pass
+    path: str | None = None

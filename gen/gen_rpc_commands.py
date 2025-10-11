@@ -1,15 +1,16 @@
 import ast as a
-import builtins as b
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 from itertools import product, takewhile
+from operator import or_
 from pathlib import Path
+from textwrap import dedent, indent
 from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
 
-from .utils import PyImports, format_docstring, rewrap, val, human_str_list, make_required
+from .utils import PyImports, human_str_list, make_required, rewrap, val
 
 JAVA_COMMAND_FILES = sorted(
     Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/commands/*.java")
@@ -185,10 +186,9 @@ def get_py_class_body(
     for group_name in moot_mutex_names:
         # destroy the mutex
         group = py_arg_groups.pop(group_name)
-        assert not group.argnames
-
         py_arg = py_args[py_arg_name := group.argnames.pop()]
         py_arg_groups["subparser"].argnames.add(py_arg_name)
+        assert not group.argnames
 
         # if the singleton mutex group we just removed was required,
         # then make its sole arg required
@@ -226,13 +226,15 @@ def get_py_class_body(
         if py_arg_helps:
             # use new sort order (args with defaults pushed to the end) for arg helptext order
             py_args_help = "\n".join(
-                rewrap(f":param {arg_name}: {py_arg_helps[arg_name]}", subsequent_indent="    ")
+                rewrap(
+                    f":param {arg_name}: {py_arg_helps.get(arg_name, '')}", subsequent_indent="    "
+                )
                 for arg_name in py_arg_names_ordered
             )
             help_paras.append(py_args_help)
 
-        py_class_help = format_docstring("\n\n".join(filter(None, help_paras)))
-        yield a.Expr(a.Constant(py_class_help))
+        py_class_help = "\n" + "\n\n".join(filter(None, help_paras)) + "\n"
+        yield a.Expr(a.Constant(indent(py_class_help, " " * 4) + " " * 4))
 
     # emit the argument (i.e. dataclass field) definitions
     yield from (py_args[name] for name in py_arg_names_ordered)
@@ -241,11 +243,18 @@ def get_py_class_body(
     #  a) overload __init__ methods to provide type hints, and
     #  b) validate mutual exclusions at runtime in __post_init__.
     if py_mutex_groups:
-        py_init_overloads = get_py_class_init_overloads(py_args, py_arg_groups, py_imports)
+        yield from get_py_class_init_overloads(
+            py_arg_names_ordered, py_args, py_arg_groups, py_imports
+        )
+
+        yield get_py_class_init_impl(py_mutex_groups, py_imports)
 
 
 def get_py_class_init_overloads(
-    py_args: dict[str, a.AnnAssign], py_arg_groups: dict[str, ArgGroup], py_imports: PyImports
+    py_arg_names_ordered: list[str],
+    py_args: dict[str, a.AnnAssign],
+    py_arg_groups: dict[str, ArgGroup],
+    py_imports: PyImports,
 ) -> list[a.FunctionDef]:
     # what are the possible contributions of each group to the arguments list?
     arg_group_possibilities = dict[str, list[dict[str, a.AnnAssign]]]()
@@ -267,79 +276,77 @@ def get_py_class_init_overloads(
             # not mutually exclusive; no dependencies between args so they can all be in one "possibility"
             group_possibilities.append({arg_name: py_args[arg_name] for arg_name in group.argnames})
 
-    args_options = [
-        ...
-        for arg_combo in product(*arg_group_possibilities.values())
+    init_overloads = list[a.FunctionDef]()
+
+    overload_args_dicts: list[dict[str, a.AnnAssign]] = [
+        reduce(or_, group_args_dicts)
+        for group_args_dicts in product(*arg_group_possibilities.values())
     ]
+    for overload_args_dict in overload_args_dicts:
+        overload_py_args: list[a.AnnAssign] = [
+            py_arg for name in py_arg_names_ordered if (py_arg := overload_args_dict.get(name))
+        ]
+        overload_args = a.arguments(
+            args=[a.arg("self")],
+            kwonlyargs=[
+                a.arg(cast(a.Name, py_arg.target).id, py_arg.annotation)
+                for py_arg in overload_py_args
+            ],
+            kw_defaults=[a.Constant(...) if py_arg.value else None for py_arg in overload_py_args],
+        )
+        init_overloads.append(
+            a.FunctionDef(
+                decorator_list=[py_imports.add("typing", "overload")],
+                name="__init__",
+                args=overload_args,
+                body=[a.Expr(a.Constant(...))],
+                lineno=0,
+            )
+        )
+
+    return init_overloads
 
 
-        # arg_group_options = [
-        #     (
-        #         # include "nothing from this group" as an option if mutex group is optional
-        #         ([[]] if not mutex_required[arg_container] else [])
-        #         +
-        #         # include each arg on its own, in required form for its solo overload
-        #         [
-        #             [
-        #                 replace(
-        #                     arg,
-        #                     optional=False,
-        #                     type_expr="Literal[True]" if arg.type_expr == "bool" else arg.type_expr,
-        #                     default_expr=None if arg.type_expr == "bool" else arg.default_expr,
-        #                 )
-        #             ]
-        #             for arg in args_in_group
-        #         ]
-        #     )
-        #     if len(mutex_argses.get(arg_container, [])) > 1
-        #     # all args are a bundle (1 option)
-        #     else ([args_in_group])
-        #     for arg_container, _args_exhaustible in arg_groups
-        #     if (args_in_group := list(_args_exhaustible))
-        # ]
+def get_py_class_init_impl(
+    py_mutex_groups: dict[str, ArgGroup], py_imports: PyImports
+) -> a.FunctionDef:
+    py_imports.add("dataclasses", "fields")
+    py_imports.add("dataclasses", "MISSING")
 
-    #     if len(args_options) > 1:
-    #         # define __init__ overloads
-    #         for args_option in args_options:
-    #             print()
-    #             print("    @overload")
-    #             print("    def __init__(self, *, ", end="")
-    #             args_option.sort(key=ArgInfo.python_sort)
-    #             print(
-    #                 ", ".join(replace(arg, doc_text=None).render() for arg in args_option), end=""
-    #             )
-    #             print("): ...")
+    init_impl = a.parse(
+        dedent("""
+            def __init__(self, **kwargs):
+                self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
+                self.__dict__.update(kwargs)
+        """)
+    ).body[0]
+    assert isinstance(init_impl, a.FunctionDef)
 
-    #         # define __init__ implementation
-    #         print()
-    #         print("    def __init__(self, **kwargs):")
-    #         init = ""
-    #         init += "self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})\n"
-    #         init += "self.__dict__.update(kwargs)\n"
-    #         for mutex, required in mutex_argses.items():
-    #             mutex_argnames_str = ", ".join(
-    #                 repr(arg.name) for arg in args if arg.arg_container == mutex
-    #             )
-    #             init += f"match len(kwargs.keys() & (args := {{{mutex_argnames_str}}})):\n"
-    #             if required:
-    #                 init += "    case 0:\n"
-    #                 init += '        raise ValueError(f"One of {args} is required!")\n'
-    #                 init += "    case 1:\n"
-    #                 init += "        pass\n"
-    #             else:
-    #                 init += "    case 0 | 1:\n"
-    #                 init += "        pass\n"
-    #             init += "    case _:\n"
-    #             init += '        raise ValueError(f"Arguments {args} are mutually exclusive!")\n'
+    for mutex in py_mutex_groups.values():
+        if mutex.required:
+            init_impl.body += a.parse(
+                dedent(f"""
+                    match len(kwargs.keys() & (args := {mutex.argnames!r})):
+                        case 0:
+                            raise ValueError(f"One of {{args!r}} is required!")
+                        case 1:
+                            pass
+                        case _:
+                            raise ValueError(f"Arguments {{args!r}} are mutually exclusive!")
+                """)
+            ).body
+        else:
+            init_impl.body += a.parse(
+                dedent(f"""
+                    match len(kwargs.keys() & (args := {mutex.argnames!r})):
+                        case 0 | 1:
+                            pass
+                        case _:
+                            raise ValueError(f"Arguments {{args!r}} are mutually exclusive!")
+                """)
+            ).body
 
-    #         print(indent(init, " " * 8))
-    #         print()
-
-    # if not cmd_help_decl and not args:
-    #     print("    pass")
-    #     print()
-
-    return py_body
+    return init_impl
 
 
 def get_py_arg_decl(
@@ -376,7 +383,7 @@ def get_py_arg_decl(
             case {"choices": choices, **rest}:
                 py_arg_annot = a.Subscript(
                     py_imports.add("typing", "Literal"),
-                    a.Tuple(a.literal_eval(choices)),
+                    a.Constant(a.literal_eval(choices)),
                 )
                 java_arg_addl_calls = rest
             case {"type": type, **rest}:
@@ -397,9 +404,7 @@ def get_py_arg_decl(
                 java_arg_addl_calls = rest
             case {"nargs": '"+"', **rest}:
                 py_arg_name += "s"
-                py_arg_annot = a.Subscript(
-                    a.Name("NonEmptyTuple"), a.Tuple([py_arg_annot, a.Constant(...)])
-                )
+                py_arg_annot = a.Subscript(a.Name("NonEmptyTuple"), py_arg_annot)
                 py_arg_can_be_none = False
                 java_arg_addl_calls = rest
             case {"required": "true", **rest}:

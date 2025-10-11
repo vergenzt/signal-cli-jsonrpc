@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import auto, StrEnum
+from enum import StrEnum, auto
 
 _dataclass = dataclass(frozen=True, kw_only=True)
 

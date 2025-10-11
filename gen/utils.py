@@ -11,7 +11,7 @@ _wrap = partial(wrap, break_long_words=False, break_on_hyphens=False)
 
 
 def human_str_list(parts: Sequence[str], conj: Literal["or", "and"]) -> str:
-    return ", ".join(parts[:-1]) + f", {conj} " + parts[-1]
+    return ", ".join(parts[:-1]) + ("," if len(parts) > 2 else "") + f" {conj} " + parts[-1]
 
 
 def make_required(py_arg: a.AnnAssign, py_imports: PyImports) -> a.AnnAssign:
@@ -48,13 +48,6 @@ def rewrap(help: str, **kw) -> str:
     )
 
 
-def format_docstring(doc: str) -> str:
-    if "\n" in doc:
-        return f'"""\n{doc}\n"""'  # put newline between doc and """ if multiline
-    else:
-        return f'"{doc}"'
-
-
 def val[T](val: T | None) -> T:
     "Helper to inline type-narrow an optional value"
     assert val, f"expected {val} to be truthy!"
@@ -69,10 +62,3 @@ class PyImports(defaultdict[str, set[str]]):
         """Adds a new name to be imported, and returns it"""
         self[mod].add(name)
         return a.Name(name)
-
-
-@dataclass
-class DataclassField:
-
-
-    def 
