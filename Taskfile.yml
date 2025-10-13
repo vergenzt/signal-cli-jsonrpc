@@ -1,31 +1,17 @@
 version: '3'
 
 vars:
-  SRC_DIRNAME: '{{.TASKFILE_DIR | osBase | replace "-" "_"}}'
+  PKG_NAME: signal_cli_jsonrpc_types
 
 tasks:
   default:
     deps:
-    - task: generate-python-from-java
-      vars:
-        FILE: rpc_types.py
+    - rpc_types
+    - rpc_commands
 
-
-  generate-python-from-java:
-    requires:
-      vars: [FILE]
-    vars:
-      FILEPATH: src/{{.SRC_DIRNAME}}/{{.FILE}}
-      GEN_PROG: gen/gen_{{.FILE}}
-      JAVA_SOURCES: signal-cli/src/main/java/org/asamk/signal/json/*.java
-    generates:
-    - '{{.FILEPATH}}'
-    sources:
-    - '{{.GEN_PROG}}'
-    - '{{.JAVA_SOURCES}}'
-    cmds:
-    - |
-      cat {{.JAVA_SOURCES}} \
-      | ast-grep scan --rule={{.RULE}} --stdin --update-all \
-      | head -n-2 > {{.FILEPATH}}
-    - ruff format {{.FILEPATH}}
+  rpc_types: >
+    python -m gen.gen_rpc_types
+    > src/{{.PKG_NAME}}/rpc_types.py
+  rpc_commands: >
+    python -m gen.gen_rpc_commands
+    > src/{{.PKG_NAME}}/rpc_commands.py
