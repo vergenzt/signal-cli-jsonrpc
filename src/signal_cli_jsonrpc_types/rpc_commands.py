@@ -85,7 +85,7 @@ class GetAttachment(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"recipient", "group_id"})):
+        match len(kwargs.keys() & (args := ["recipient", "group_id"])):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -125,7 +125,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"contact", "profile", "group_id"})):
+        match len(kwargs.keys() & (args := ["contact", "profile", "group_id"])):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -298,7 +298,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"hide", "forget"})):
+        match len(kwargs.keys() & (args := OrderedSet(["hide", "forget"]))):
             case 0 | 1:
                 pass
             case _:
@@ -573,7 +573,8 @@ class Trust(RpcCommand, rpc_output_type=Empty):
         )
         self.__dict__.update(kwargs)
         match len(
-            kwargs.keys() & (args := {"trust_all_known_keys", "verified_safety_number"})
+            kwargs.keys()
+            & (args := OrderedSet(["trust_all_known_keys", "verified_safety_number"]))
         ):
             case 0 | 1:
                 pass
@@ -668,7 +669,9 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"delete_username", "username"})):
+        match len(
+            kwargs.keys() & (args := OrderedSet(["username", "delete_username"]))
+        ):
             case 0 | 1:
                 pass
             case _:
@@ -824,7 +827,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"avatar", "remove_avatar"})):
+        match len(kwargs.keys() & (args := OrderedSet(["avatar", "remove_avatar"]))):
             case 0 | 1:
                 pass
             case _:

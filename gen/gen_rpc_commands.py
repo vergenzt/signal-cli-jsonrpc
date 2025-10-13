@@ -10,6 +10,7 @@ from textwrap import dedent, indent
 from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
+from ordered_set import OrderedSet
 
 from .utils import PyImports, human_str_list, make_required, py_dataclass_deco, rewrap, val
 
@@ -26,6 +27,10 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
         "Send": {"message_from_stdin"},
     },
 )
+
+
+# when printing, pretend it's a regular set
+OrderedSet.__str__ = lambda self: '{' + str(list(self))[1:-1] + '}'
 
 
 def main():
@@ -112,7 +117,7 @@ def get_py_class_name(java_class_decl_n: SgNode) -> str | None:
 class ArgGroup:
     mutex: bool
     required: bool
-    argnames: set[str]
+    argnames: OrderedSet[str]
 
 
 def get_py_class_body(
@@ -132,7 +137,7 @@ def get_py_class_body(
     py_args = dict[str, a.AnnAssign]()
     py_arg_helps = dict[str, str]()
     py_arg_groups = dict[str, ArgGroup](
-        {"subparser": ArgGroup(mutex=False, required=False, argnames=set())}
+        {"subparser": ArgGroup(mutex=False, required=False, argnames=OrderedSet(()))}
     )
 
     for java_stmt in java_body:
@@ -159,7 +164,7 @@ def get_py_class_body(
 
             var_name = val(val(java_stmt.field("declarator")).field("name")).text()
             group_required = val(mutex_decl.parent()).matches(pattern="$_.required(true)")
-            group = ArgGroup(mutex=True, required=group_required, argnames=set())
+            group = ArgGroup(mutex=True, required=group_required, argnames=OrderedSet(()))
             py_arg_groups[var_name] = group
 
             assert mutex_decl.ancestors()[int(group_required)].kind() == "variable_declarator"
@@ -229,9 +234,7 @@ def get_py_class_docstring(
         if py_mutex_groups:
             note_lines = list[str]()
             for mutex in py_mutex_groups.values():
-                arg_strs = [
-                    f":attr:`{n}`" for n in sorted(mutex.argnames, key=py_arg_names_ordered.index)
-                ]
+                arg_strs = [f":attr:`{n}`" for n in mutex.argnames]
                 if mutex.required:
                     args_str = human_str_list(arg_strs, "or")
                     note = f" - Exactly one of {args_str} is required."
@@ -275,7 +278,7 @@ def get_py_class_init_overloads(
             if not group.required:
                 group_possibilities.append(dict())
             # or exactly one of each arg (in which case the arg is "required" for the overload to apply)
-            for arg_name in sorted(group.argnames, key=py_arg_names_ordered.index):
+            for arg_name in group.argnames:
                 arg_as_required = make_required(py_args[arg_name], py_imports)
                 group_possibilities.append({arg_name: arg_as_required})
 
@@ -333,7 +336,7 @@ def get_py_class_init_impl(
         if mutex.required:
             init_impl.body += a.parse(
                 dedent(f"""
-                    match len(kwargs.keys() & (args := {mutex.argnames!r})):
+                    match len(kwargs.keys() & (args := {list(mutex.argnames)!r})):
                         case 0:
                             raise ValueError(f"One of {{args!r}} is required!")
                         case 1:

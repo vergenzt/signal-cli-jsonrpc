@@ -1,10 +1,8 @@
 from dataclasses import dataclass
 from enum import StrEnum, auto
 
-_dataclass = dataclass(frozen=True, kw_only=True)
 
-
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Attachment:
     contentType: str | None
     filename: str | None
@@ -16,12 +14,12 @@ class Attachment:
     uploadTimestamp: int | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class AttachmentData:
     data: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class CallMessage:
     offerMessage: Offer | None = None
     answerMessage: Answer | None = None
@@ -29,34 +27,34 @@ class CallMessage:
     hangupMessage: Hangup | None = None
     iceUpdateMessages: tuple[IceUpdate | None, ...]
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Offer:
         id: int
         type: str | None
         opaque: str | None
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Answer:
         id: int
         opaque: str | None
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Busy:
         id: int
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Hangup:
         id: int
         type: str | None
         deviceId: int
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class IceUpdate:
         id: int
         opaque: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Contact:
     number: str | None
     uuid: str | None
@@ -77,7 +75,7 @@ class Contact:
     profile: Profile | None
     internal: Internal | None = None
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Profile:
         lastUpdateTimestamp: int
         givenName: str | None
@@ -87,7 +85,7 @@ class Contact:
         hasAvatar: bool
         mobileCoinAddress: str | None
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class Internal:
         capabilities: tuple[str | None, ...]
         unidentifiedAccessMode: str | None
@@ -95,7 +93,7 @@ class Contact:
         discoverableByPhonenumber: bool | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ContactAddress:
     type: str | None
     label: str | None
@@ -108,20 +106,20 @@ class ContactAddress:
     country: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ContactAvatar:
     attachment: Attachment | None
     isProfile: bool
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ContactEmail:
     value: str | None
     type: str | None
     label: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ContactName:
     nickname: str | None
     given: str | None
@@ -131,14 +129,14 @@ class ContactName:
     middle: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ContactPhone:
     value: str | None
     type: str | None
     label: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class DataMessage:
     timestamp: int
     message: str | None
@@ -158,19 +156,19 @@ class DataMessage:
     storyContext: StoryContext | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class EditMessage:
     targetSentTimestamp: int
     dataMessage: DataMessage | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Error:
     message: str | None
     type: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class GroupInfo:
     groupId: str | None
     groupName: str | None
@@ -178,7 +176,7 @@ class GroupInfo:
     type: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Mention:
     name: str | None
     number: str | None
@@ -187,7 +185,7 @@ class Mention:
     length: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class MessageEnvelope:
     source: str | None
     sourceNumber: str | None
@@ -206,13 +204,13 @@ class MessageEnvelope:
     typingMessage: TypingMessage | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Payment:
     note: str | None
     receipt: bytes
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Preview:
     url: str | None
     title: str | None
@@ -220,7 +218,7 @@ class Preview:
     image: Attachment | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Quote:
     id: int
     author: str | None
@@ -232,14 +230,14 @@ class Quote:
     textStyles: tuple[TextStyle | None, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class QuotedAttachment:
     contentType: str | None
     filename: str | None
     thumbnail: Attachment | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Reaction:
     emoji: str | None
     targetAuthor: str | None
@@ -249,7 +247,7 @@ class Reaction:
     isRemove: bool
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ReceiptMessage:
     when: int
     isDelivery: bool
@@ -258,19 +256,19 @@ class ReceiptMessage:
     timestamps: tuple[int | None, ...]
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RecipientAddress:
     uuid: str | None
     number: str | None
     username: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RemoteDelete:
     timestamp: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendMessageResult:
     recipientAddress: RecipientAddress | None
     groupId: str | None = None
@@ -287,7 +285,7 @@ class SendMessageResult:
         INVALID_PRE_KEY_FAILURE = auto()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SharedContact:
     name: ContactName | None
     avatar: ContactAvatar | None = None
@@ -297,27 +295,27 @@ class SharedContact:
     organization: str | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Sticker:
     packId: str | None
     stickerId: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class StoryContext:
     authorNumber: str | None
     authorUuid: str | None
     sentTimestamp: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class StoryMessage:
     allowsReplies: bool
     groupId: str | None = None
     fileAttachment: Attachment | None = None
     textAttachment: TextAttachment | None = None
 
-    @_dataclass
+    @dataclass(frozen=True, kw_only=True)
     class TextAttachment:
         text: str | None
         style: str | None = None
@@ -327,7 +325,7 @@ class StoryMessage:
         backgroundGradient: Gradient | None = None
         backgroundColor: str | None = None
 
-        @_dataclass
+        @dataclass(frozen=True, kw_only=True)
         class Gradient:
             startColor: str | None
             endColor: str | None
@@ -336,7 +334,7 @@ class StoryMessage:
             angle: int | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SyncDataMessage:
     destination: str | None
     destinationNumber: str | None
@@ -351,7 +349,7 @@ class SyncMessageType(StrEnum):
     REQUEST_SYNC = auto()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SyncMessage:
     sentMessage: SyncDataMessage | None = None
     sentStoryMessage: SyncStoryMessage | None = None
@@ -361,7 +359,7 @@ class SyncMessage:
     type: SyncMessageType | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SyncReadMessage:
     sender: str | None
     senderNumber: str | None
@@ -369,21 +367,21 @@ class SyncReadMessage:
     timestamp: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SyncStoryMessage:
     destinationNumber: str | None
     destinationUuid: str | None
     dataMessage: StoryMessage | None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class TextStyle:
     style: str | None
     start: int
     length: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class TypingMessage:
     action: str | None
     timestamp: int
