@@ -2,12 +2,13 @@ import json
 import os
 from abc import ABC
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator, Self
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Self
 from uuid import uuid7
 
 from aiohttp import ClientSession
 from aiohttp_sse_client.client import EventSource
 from attr import field
+from caseutil import to_camel, to_snake
 from dacite import from_dict
 
 from . import Error, MessageEnvelope
@@ -59,6 +60,13 @@ type RpcResponse[T] = RpcResponseOk[T] | RpcResponseError
 type RpcMessage = RpcRequest | RpcResponse | list[RpcMessage]
 
 
+def dict_transform_keys(transform: Callable[[str], str], dct: dict[str, Any]) -> dict[str, Any]:
+    return {
+        transform(k): (dict_transform_keys(transform, v) if isinstance(v, dict) else v)
+        for k, v in dct.items()
+    }
+
+
 @dataclass(frozen=True)
 class _RpcMessageWrapper[T: RpcMessage]:
     "Helper to allow deserializing a top-level union with `from_dict`"
@@ -97,8 +105,8 @@ class SignalCliRPCSession(ClientSession):
 
     async def rpc[OutputT](self, command: RpcCommand[OutputT]) -> RpcResponse[OutputT]:
         request = RpcRequest(command.rpc_method, command)
-        response_obj = await self.post("rpc", json=asdict(request))
-        response_dict = await response_obj.json()
+        response_obj = await self.post("rpc", json=dict_transform_keys(to_camel, asdict(request)))
+        response_dict = dict_transform_keys(to_snake, await response_obj.json())
         output_type = command.rpc_output_type
         response = from_dict(_RpcMessageWrapper[RpcResponse[output_type]], response_dict)._
         assert response.id == request.id
