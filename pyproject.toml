@@ -1,7 +1,7 @@
 [project]
-name = "signal-cli-jsonrpc-types"
+name = "signal-cli-jsonrpc"
 version = "0.1.0"
-description = "Python dataclass types mirroring signal-cli's JSON Schema types"
+description = "Strongly typed Python dataclass interface to signal-cli's RPC commands"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

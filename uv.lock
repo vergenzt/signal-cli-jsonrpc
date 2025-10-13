@@ -310,7 +310,7 @@ wheels = [
 ]
 
 [[package]]
-name = "signal-cli-jsonrpc-types"
+name = "signal-cli-jsonrpc"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

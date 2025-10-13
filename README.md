@@ -1,3 +1,3 @@
-# signal-cli-json-types
+# signal-cli-json
 
-Python dataclass types mirroring signal-cli's JSON Schema types
+Strongly typed Python dataclass interface to signal-cli's RPC commands.
