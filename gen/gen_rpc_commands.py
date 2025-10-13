@@ -284,7 +284,7 @@ def get_py_class_init_overloads(
             if not group.required:
                 group_possibilities.append(dict())
             # or exactly one of each arg (in which case the arg is "required" for the overload to apply)
-            for arg_name in group.argnames:
+            for arg_name in sorted(group.argnames, key=py_arg_names_ordered.index):
                 arg_as_required = make_required(py_args[arg_name], py_imports)
                 group_possibilities.append({arg_name: arg_as_required})
 

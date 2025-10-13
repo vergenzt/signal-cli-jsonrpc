@@ -101,7 +101,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
 
     Note:
-     - Exactly one of :attr:`group_id`, :attr:`profile`, or :attr:`contact` is required.
+     - Exactly one of :attr:`group_id`, :attr:`contact`, or :attr:`profile` is required.
 
     :param contact: Get a contact avatar
     :param profile: Get a profile avatar
@@ -113,20 +113,20 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
     group_id: str | None = None
 
     @overload
-    def __init__(self, *, group_id: str): ...
+    def __init__(self, *, contact: str): ...
 
     @overload
     def __init__(self, *, profile: str): ...
 
     @overload
-    def __init__(self, *, contact: str): ...
+    def __init__(self, *, group_id: str): ...
 
     def __init__(self, **kwargs):
         self.__dict__.update(
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"group_id", "profile", "contact"})):
+        match len(kwargs.keys() & (args := {"group_id", "contact", "profile"})):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -274,7 +274,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
     Remove the details of a given contact
 
     Note:
-     - :attr:`hide` and :attr:`forget` are mutually exclusive.
+     - :attr:`forget` and :attr:`hide` are mutually exclusive.
 
     :param recipient: Contact number
     :param hide: Hide the contact in the contact list, but keep the data.
@@ -299,7 +299,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"hide", "forget"})):
+        match len(kwargs.keys() & (args := {"forget", "hide"})):
             case 0 | 1:
                 pass
             case _:
@@ -613,7 +613,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     Update the account attributes on the signal server.
 
     Note:
-     - :attr:`delete_username` and :attr:`username` are mutually exclusive.
+     - :attr:`username` and :attr:`delete_username` are mutually exclusive.
 
     :param device_name: Specify a name to describe this device.
     :param unrestricted_unidentified_sender: Enable if anyone should be able to send
@@ -650,7 +650,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
         unrestricted_unidentified_sender: bool | None = ...,
         discoverable_by_number: bool | None = ...,
         number_sharing: bool | None = ...,
-        delete_username: Literal[True],
+        username: str,
     ): ...
 
     @overload
@@ -661,7 +661,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
         unrestricted_unidentified_sender: bool | None = ...,
         discoverable_by_number: bool | None = ...,
         number_sharing: bool | None = ...,
-        username: str,
+        delete_username: Literal[True],
     ): ...
 
     def __init__(self, **kwargs):
@@ -669,7 +669,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"delete_username", "username"})):
+        match len(kwargs.keys() & (args := {"username", "delete_username"})):
             case 0 | 1:
                 pass
             case _:
@@ -766,7 +766,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     Set a name, about and avatar image for the user profile
 
     Note:
-     - :attr:`avatar` and :attr:`remove_avatar` are mutually exclusive.
+     - :attr:`remove_avatar` and :attr:`avatar` are mutually exclusive.
 
     :param given_name: New profile (given) name
     :param family_name: New profile family name (optional)
@@ -825,7 +825,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"avatar", "remove_avatar"})):
+        match len(kwargs.keys() & (args := {"remove_avatar", "avatar"})):
             case 0 | 1:
                 pass
             case _:
