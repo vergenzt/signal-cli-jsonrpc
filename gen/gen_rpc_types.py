@@ -4,6 +4,7 @@ from subprocess import check_output as sh
 from typing import cast
 
 from ast_grep_py import SgNode, SgRoot
+from caseutil import to_snake
 
 from .utils import PyImports, py_dataclass_deco, val
 
@@ -107,7 +108,7 @@ def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> a.AnnAssign:
     java_param_name = val(java_param.field("name")).text()
     java_param_type_node = val(java_param.field("type"))
 
-    py_param_name = java_param_name.removeprefix("Json")
+    py_param_name = to_snake(java_param_name)
     py_param_type_node = get_py_type(java_param_type_node, py_imports)
     py_assign_tgt: a.expr | None = None
 

@@ -10,6 +10,7 @@ from textwrap import dedent, indent
 from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
+from caseutil import to_snake
 from ordered_set import OrderedSet
 
 from .utils import PyImports, human_str_list, make_required, py_dataclass_deco, rewrap, val
@@ -365,7 +366,7 @@ def get_py_arg_decl(
     java_opts = val(java_add_arg_call.field("arguments"))
     first_long_opt = val(java_opts.find(kind="string_fragment", regex="^(--)?[a-z]")).text()
 
-    py_arg_name: str = first_long_opt.lstrip("-").replace("-", "_")  # snake case
+    py_arg_name: str = to_snake(first_long_opt.lstrip("-"))
     py_arg_annot: a.expr = a.Name("str")
     py_arg_value: a.expr | None = None
     py_arg_can_be_none: bool = True
