@@ -4,10 +4,9 @@ from typing import Literal, overload
 from .rpc_session import Empty, RpcCommand
 
 type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]
-_dataclass = dataclass(frozen=True, kw_only=True)
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class AddDevice(RpcCommand, rpc_output_type=Empty):
     """
     Link another device to this device. Only works, if this is the primary device.
@@ -18,7 +17,7 @@ class AddDevice(RpcCommand, rpc_output_type=Empty):
     uri: str
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class AddStickerPack(RpcCommand, rpc_output_type=Empty):
     """
     Install a sticker pack for this account.
@@ -30,7 +29,7 @@ class AddStickerPack(RpcCommand, rpc_output_type=Empty):
     uris: NonEmptyTuple[str]
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Block(RpcCommand, rpc_output_type=Empty):
     """
     Block the given contacts or groups (no messages will be received)
@@ -43,7 +42,7 @@ class Block(RpcCommand, rpc_output_type=Empty):
     group_ids: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class FinishChangeNumber(RpcCommand, rpc_output_type=Empty):
     """
     Verify the new number using the code received via SMS or voice.
@@ -58,7 +57,7 @@ class FinishChangeNumber(RpcCommand, rpc_output_type=Empty):
     pin: str | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class GetAttachment(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve an already downloaded attachment base64 encoded.
@@ -95,7 +94,7 @@ class GetAttachment(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class GetAvatar(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
@@ -135,7 +134,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class GetSticker(RpcCommand, rpc_output_type=Empty):
     """
     Retrieve the sticker of a sticker pack base64 encoded.
@@ -148,7 +147,7 @@ class GetSticker(RpcCommand, rpc_output_type=Empty):
     sticker_id: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class GetUserStatus(RpcCommand, rpc_output_type=Empty):
     """
     Check if the specified phone number/s have been registered
@@ -161,7 +160,7 @@ class GetUserStatus(RpcCommand, rpc_output_type=Empty):
     usernames: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class JoinGroup(RpcCommand, rpc_output_type=Empty):
     """
     Join a group via an invitation link.
@@ -172,7 +171,7 @@ class JoinGroup(RpcCommand, rpc_output_type=Empty):
     uri: str
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ListContacts(RpcCommand, rpc_output_type=Empty):
     """
     Show a list of known contacts with names and profiles.
@@ -194,14 +193,14 @@ class ListContacts(RpcCommand, rpc_output_type=Empty):
     internal: bool = False
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ListDevices(RpcCommand, rpc_output_type=Empty):
     """
     Show a list of linked devices.
     """
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ListGroups(RpcCommand, rpc_output_type=Empty):
     """
     List group information including names, ids, active status, blocked status and members
@@ -215,7 +214,7 @@ class ListGroups(RpcCommand, rpc_output_type=Empty):
     group_ids: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ListIdentities(RpcCommand, rpc_output_type=Empty):
     """
     List all known identity keys and their trust status, fingerprint and safety number.
@@ -226,14 +225,14 @@ class ListIdentities(RpcCommand, rpc_output_type=Empty):
     number: str | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class ListStickerPacks(RpcCommand, rpc_output_type=Empty):
     """
     Show a list of known sticker packs.
     """
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class QuitGroup(RpcCommand, rpc_output_type=Empty):
     """
     Send a quit group message to all group members and remove self from member list.
@@ -249,7 +248,7 @@ class QuitGroup(RpcCommand, rpc_output_type=Empty):
     admins: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RemoteDelete(RpcCommand, rpc_output_type=Empty):
     """
     Remotely delete a previously sent message.
@@ -268,7 +267,7 @@ class RemoteDelete(RpcCommand, rpc_output_type=Empty):
     note_to_self: bool = False
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RemoveContact(RpcCommand, rpc_output_type=Empty):
     """
     Remove the details of a given contact
@@ -306,7 +305,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RemoveDevice(RpcCommand, rpc_output_type=Empty):
     """
     Remove a linked device.
@@ -317,14 +316,14 @@ class RemoveDevice(RpcCommand, rpc_output_type=Empty):
     device_id: int
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class RemovePin(RpcCommand, rpc_output_type=Empty):
     """
     Remove the registration lock pin.
     """
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Send(RpcCommand, rpc_output_type=Empty):
     """
     Send a message to another user or group.
@@ -394,14 +393,14 @@ class Send(RpcCommand, rpc_output_type=Empty):
     edit_timestamp: int | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendContacts(RpcCommand, rpc_output_type=Empty):
     """
     Send a synchronization message with the local contacts list to all linked devices.
     """
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendMessageRequestResponse(RpcCommand, rpc_output_type=Empty):
     """
     Send response to a message request to linked devices.
@@ -418,7 +417,7 @@ class SendMessageRequestResponse(RpcCommand, rpc_output_type=Empty):
     usernames: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendPaymentNotification(RpcCommand, rpc_output_type=Empty):
     """
     Send a payment notification.
@@ -433,7 +432,7 @@ class SendPaymentNotification(RpcCommand, rpc_output_type=Empty):
     note: str | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendReaction(RpcCommand, rpc_output_type=Empty):
     """
     Send reaction to a previously received or sent message.
@@ -460,7 +459,7 @@ class SendReaction(RpcCommand, rpc_output_type=Empty):
     story: bool = False
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendReceipt(RpcCommand, rpc_output_type=Empty):
     """
     Send a read or viewed receipt to a previously received message.
@@ -476,14 +475,14 @@ class SendReceipt(RpcCommand, rpc_output_type=Empty):
     type: Literal[("read", "viewed")] | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendSyncRequest(RpcCommand, rpc_output_type=Empty):
     """
     Send a synchronization request message to primary device (for group, contacts, ...).
     """
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SendTyping(RpcCommand, rpc_output_type=Empty):
     """
     Send typing message to trigger a typing indicator for the recipient. Indicator
@@ -499,7 +498,7 @@ class SendTyping(RpcCommand, rpc_output_type=Empty):
     stop: bool = False
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SetPin(RpcCommand, rpc_output_type=Empty):
     """
     Set a registration lock pin, to prevent others from registering this number.
@@ -511,7 +510,7 @@ class SetPin(RpcCommand, rpc_output_type=Empty):
     pin: str | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class StartChangeNumber(RpcCommand, rpc_output_type=Empty):
     """
     Change account to a new phone number with SMS or voice verification.
@@ -527,7 +526,7 @@ class StartChangeNumber(RpcCommand, rpc_output_type=Empty):
     captcha: str | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class SubmitRateLimitChallenge(RpcCommand, rpc_output_type=Empty):
     """
     Submit a captcha challenge to lift the rate limit. This command should only be
@@ -541,7 +540,7 @@ class SubmitRateLimitChallenge(RpcCommand, rpc_output_type=Empty):
     captcha: str
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Trust(RpcCommand, rpc_output_type=Empty):
     """
     Set the trust level of a given number.
@@ -582,7 +581,7 @@ class Trust(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Unblock(RpcCommand, rpc_output_type=Empty):
     """
     Unblock the given contacts or groups (messages will be received again)
@@ -595,7 +594,7 @@ class Unblock(RpcCommand, rpc_output_type=Empty):
     group_ids: tuple[str, ...] = ()
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class Unregister(RpcCommand, rpc_output_type=Empty):
     """
     Unregister the current device from the signal server.
@@ -607,7 +606,7 @@ class Unregister(RpcCommand, rpc_output_type=Empty):
     delete_account: bool = False
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     """
     Update the account attributes on the signal server.
@@ -676,7 +675,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UpdateConfiguration(RpcCommand, rpc_output_type=Empty):
     """
     Update signal configs and sync them to linked devices.
@@ -694,7 +693,7 @@ class UpdateConfiguration(RpcCommand, rpc_output_type=Empty):
     link_previews: bool | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UpdateContact(RpcCommand, rpc_output_type=Empty):
     """
     Update the details of a given contact
@@ -719,7 +718,7 @@ class UpdateContact(RpcCommand, rpc_output_type=Empty):
     expiration: int | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UpdateGroup(RpcCommand, rpc_output_type=Empty):
     """
     Create or update a group.
@@ -760,7 +759,7 @@ class UpdateGroup(RpcCommand, rpc_output_type=Empty):
     expiration: int | None = None
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     """
     Set a name, about and avatar image for the user profile
@@ -832,7 +831,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
                 raise ValueError(f"Arguments {args!r} are mutually exclusive!")
 
 
-@_dataclass
+@dataclass(frozen=True, kw_only=True)
 class UploadStickerPack(RpcCommand, rpc_output_type=Empty):
     """
     Upload a new sticker pack, consisting of a manifest file and the stickers images.

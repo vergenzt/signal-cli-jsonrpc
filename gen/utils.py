@@ -61,3 +61,13 @@ class PyImports(defaultdict[str, set[str]]):
         """Adds a new name to be imported, and returns it"""
         self[mod].add(name)
         return a.Name(name)
+
+
+def py_dataclass_deco(py_imports: PyImports) -> a.expr:
+    return a.Call(
+        func=py_imports.add("dataclasses", "dataclass"),
+        keywords=[
+            a.keyword("frozen", a.Constant(True)),
+            a.keyword("kw_only", a.Constant(True)),
+        ],
+    )

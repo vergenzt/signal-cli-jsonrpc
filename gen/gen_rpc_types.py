@@ -5,7 +5,7 @@ from typing import cast
 
 from ast_grep_py import SgNode, SgRoot
 
-from .utils import PyImports, val
+from .utils import PyImports, py_dataclass_deco, val
 
 JAVA_JSON_TYPE_FILES = sorted(
     Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/json/*.java")
@@ -23,18 +23,6 @@ def main():
 def gen() -> a.Module:
     py_imports = PyImports()
 
-    py_dataclass = a.Assign(
-        [a.Name("_dataclass")],
-        a.Call(
-            func=py_imports.add("dataclasses", "dataclass"),
-            keywords=[
-                a.keyword("frozen", a.Constant(True)),
-                a.keyword("kw_only", a.Constant(True)),
-            ],
-        ),
-        lineno=0,
-    )
-
     py_decls = [
         py_decl
         for file in JAVA_JSON_TYPE_FILES
@@ -50,7 +38,6 @@ def gen() -> a.Module:
 
     py_body = list[a.stmt]()
     py_body.extend(py_import_decls)
-    py_body.append(py_dataclass)
     py_body.extend(py_decls)
     return a.Module(py_body)
 
@@ -63,7 +50,7 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None
 
     match java_decl_n.kind():
         case "record_declaration":
-            py_type_decos = (a.Name("_dataclass"),)
+            py_type_decos = (py_dataclass_deco(py_imports),)
             py_body = tuple(
                 sorted(
                     [

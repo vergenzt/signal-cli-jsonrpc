@@ -11,7 +11,7 @@ from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
 
-from .utils import PyImports, human_str_list, make_required, rewrap, val
+from .utils import PyImports, human_str_list, make_required, py_dataclass_deco, rewrap, val
 
 JAVA_COMMAND_FILES = sorted(
     Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/commands/*.java")
@@ -41,17 +41,6 @@ def gen() -> a.Module:
 
     py_consts: list[a.stmt] = [
         a.parse("type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]").body[0],
-        a.Assign(
-            [a.Name("_dataclass")],
-            a.Call(
-                func=py_imports.add("dataclasses", "dataclass"),
-                keywords=[
-                    a.keyword("frozen", a.Constant(True)),
-                    a.keyword("kw_only", a.Constant(True)),
-                ],
-            ),
-            lineno=0,
-        ),
     ]
 
     py_decls = [
@@ -88,7 +77,7 @@ def get_py_decl(java_class_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef 
         return None
 
     py_class_decl = a.ClassDef(
-        decorator_list=[a.Name("_dataclass")],
+        decorator_list=[py_dataclass_deco(py_imports)],
         name=py_name,
         bases=[py_imports.add(".rpc_session", "RpcCommand")],
         keywords=[
