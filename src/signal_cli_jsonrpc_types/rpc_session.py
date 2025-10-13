@@ -31,8 +31,7 @@ class RpcCommand[T](ABC):
         cls.rpc_method: str = cls.__name__[0].upper() + cls.__name__[1:]
         cls.rpc_output_type = rpc_output_type
 
-    def __init__(self) -> None:
-        # https://stackoverflow.com/a/79182457
+    def __new__(cls) -> None:
         raise NotImplementedError("Do not instantiate this class directly")
 
 
