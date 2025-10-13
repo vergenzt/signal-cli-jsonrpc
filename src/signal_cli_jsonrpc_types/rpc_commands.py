@@ -101,7 +101,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
 
     Note:
-     - Exactly one of :attr:`group_id`, :attr:`contact`, or :attr:`profile` is required.
+     - Exactly one of :attr:`contact`, :attr:`profile`, or :attr:`group_id` is required.
 
     :param contact: Get a contact avatar
     :param profile: Get a profile avatar
@@ -126,7 +126,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"group_id", "contact", "profile"})):
+        match len(kwargs.keys() & (args := {"contact", "profile", "group_id"})):
             case 0:
                 raise ValueError(f"One of {args!r} is required!")
             case 1:
@@ -274,7 +274,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
     Remove the details of a given contact
 
     Note:
-     - :attr:`forget` and :attr:`hide` are mutually exclusive.
+     - :attr:`hide` and :attr:`forget` are mutually exclusive.
 
     :param recipient: Contact number
     :param hide: Hide the contact in the contact list, but keep the data.
@@ -299,7 +299,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"forget", "hide"})):
+        match len(kwargs.keys() & (args := {"hide", "forget"})):
             case 0 | 1:
                 pass
             case _:
@@ -669,7 +669,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"username", "delete_username"})):
+        match len(kwargs.keys() & (args := {"delete_username", "username"})):
             case 0 | 1:
                 pass
             case _:
@@ -766,7 +766,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     Set a name, about and avatar image for the user profile
 
     Note:
-     - :attr:`remove_avatar` and :attr:`avatar` are mutually exclusive.
+     - :attr:`avatar` and :attr:`remove_avatar` are mutually exclusive.
 
     :param given_name: New profile (given) name
     :param family_name: New profile family name (optional)
@@ -825,7 +825,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := {"remove_avatar", "avatar"})):
+        match len(kwargs.keys() & (args := {"avatar", "remove_avatar"})):
             case 0 | 1:
                 pass
             case _:

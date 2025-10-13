@@ -227,7 +227,7 @@ def get_py_class_body(
 
 def get_py_class_docstring(
     py_cmd_help: str | None,
-    py_mutex_groups: ...,
+    py_mutex_groups: dict[str, ArgGroup],
     py_arg_helps: dict[str, str],
     py_arg_names_ordered: list[str],
 ) -> a.stmt | None:
@@ -240,7 +240,9 @@ def get_py_class_docstring(
         if py_mutex_groups:
             note_lines = list[str]()
             for mutex in py_mutex_groups.values():
-                arg_strs = [f":attr:`{n}`" for n in mutex.argnames]
+                arg_strs = [
+                    f":attr:`{n}`" for n in sorted(mutex.argnames, key=py_arg_names_ordered.index)
+                ]
                 if mutex.required:
                     args_str = human_str_list(arg_strs, "or")
                     note = f" - Exactly one of {args_str} is required."
