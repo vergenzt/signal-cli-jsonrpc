@@ -11,7 +11,9 @@ tasks:
 
   rpc_types: >
     python -m gen.gen_rpc_types
-    > src/{{.PKG_NAME}}/rpc_types.py
+    > ${tmp:=$(mktemp -u)}
+    && mv "$tmp" src/{{.PKG_NAME}}/rpc_types.py
   rpc_commands: >
     python -m gen.gen_rpc_commands
-    > src/{{.PKG_NAME}}/rpc_commands.py
+    > ${tmp:=$(mktemp -u)}
+    && mv "$tmp" src/{{.PKG_NAME}}/rpc_commands.py

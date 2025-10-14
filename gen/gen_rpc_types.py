@@ -1,12 +1,15 @@
 import ast as a
+import builtins as b
+from itertools import chain
 from pathlib import Path
 from subprocess import check_output as sh
-from typing import cast
+from textwrap import dedent
+from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
 from caseutil import to_snake
 
-from .utils import PyImports, py_dataclass_deco, val
+from .utils import PyImports, make_falsy_default, make_optional, py_dataclass_deco, val
 
 JAVA_JSON_TYPE_FILES = sorted(
     Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/json/*.java")
@@ -52,16 +55,28 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None
     match java_decl_n.kind():
         case "record_declaration":
             py_type_decos = (py_dataclass_deco(py_imports),)
+
+            java_params = list(
+                filter(SgNode.is_named, val(java_decl_n.field("parameters")).children())
+            )
+            while java_unwrap_p := next(
+                (p for p in java_params if p.has(regex="@JsonUnwrapped")), None
+            ):
+                java_params.remove(java_unwrap_p)
+                py_unwrap_p, _ = get_py_param_decl(java_unwrap_p, py_imports)
+                match py_unwrap_p.annotation:
+                    case a.BinOp(a.Name() as py_unwrap_type_n, a.BitOr(), a.Constant(None)):
+                        py_bases += (py_unwrap_type_n,)
+                    case _:
+                        raise NotImplementedError()
+
             py_body = tuple(
-                sorted(
-                    [
-                        get_py_param_decl(java_param, py_imports)
-                        for java_param in filter(
-                            SgNode.is_named, val(java_decl_n.field("parameters")).children()
-                        )
-                    ],
-                    key=lambda ann_assign: cast(a.AnnAssign, ann_assign).target is not None,
+                decl
+                for (py_param, extra_decls) in sorted(
+                    [get_py_param_decl(p, py_imports) for p in java_params],
+                    key=lambda all_decls: all_decls[0].target is not None,
                 )
+                for decl in (py_param, *extra_decls)
             )
             if java_decl_body := java_decl_n.field("body"):
                 py_body = py_body + tuple(
@@ -104,31 +119,59 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None
     )
 
 
-def get_py_param_decl(java_param: SgNode, py_imports: PyImports) -> a.AnnAssign:
+def get_py_param_decl(
+    java_param: SgNode, py_imports: PyImports
+) -> tuple[a.AnnAssign, tuple[a.stmt, ...]]:
     java_param_name = val(java_param.field("name")).text()
     java_param_type_node = val(java_param.field("type"))
 
     py_param_name = to_snake(java_param_name)
-    py_param_type_node = get_py_type(java_param_type_node, py_imports)
-    py_assign_tgt: a.expr | None = None
-
-    if (
-        next(filter(SgNode.is_named, java_param.children())).text()
-        == "@JsonInclude(JsonInclude.Include.NON_NULL)"
-    ):
-        # include a falsy default if field might be omitted
-        match py_param_type_node:
-            case a.BinOp(_, a.BitOr(), a.Constant(None)):
-                py_assign_tgt = a.Constant(None)
-            case a.Subscript(a.Name("tuple"), _):
-                py_assign_tgt = a.Tuple([])
-
-    return a.AnnAssign(
+    py_param = a.AnnAssign(
         target=a.Name(id=py_param_name),
-        annotation=py_param_type_node,
-        value=py_assign_tgt,
+        annotation=get_py_type(java_param_type_node, py_imports),
+        value=None,
         simple=1,
     )
+
+    if mods := java_param.find(kind="modifiers"):
+        match mods.text():
+            case "@Deprecated":
+                py_imports.add("typing", "overload")
+                py_imports.add("warnings", "deprecated")
+                deprecated_overload = a.parse(
+                    dedent(f"""
+                        @property
+                        @overload
+                        @deprecated("Deprecated")
+                        def {py_param_name}(self) -> {a.unparse(py_param.annotation)}: ...
+                    """)
+                ).body[0]
+                condition = a.If(
+                    test=py_imports.add("typing", "TYPE_CHECKING"),
+                    body=[deprecated_overload],
+                )
+
+                return (py_param, (condition,))
+
+            case (
+                "@JsonInclude(JsonInclude.Include.NON_NULL)"
+                | "@JsonInclude(JsonInclude.Include.NON_EMPTY)"
+            ):
+                # json element might be omitted -> give it a falsy default.
+                match py_param.annotation:
+                    case a.BinOp(_, a.BitOr(), a.Constant(None)):
+                        py_param.value = a.Constant(None)
+                    case a.Subscript(a.Name("tuple"), _):
+                        py_param.value = a.Tuple([])
+
+            case "@JsonUnwrapped":
+                # handled by the caller
+                pass
+
+            case _:
+                raise NotImplementedError(f"Unhandled Java annotation: {mods.text()}")
+
+    return py_param, ()
 
 
 def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> a.expr:

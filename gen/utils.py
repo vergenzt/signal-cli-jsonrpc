@@ -38,6 +38,21 @@ def make_required(py_arg: a.AnnAssign, py_imports: PyImports) -> a.AnnAssign:
     return py_arg
 
 
+def make_optional(py_arg: a.AnnAssign) -> a.AnnAssign:
+    py_arg = copy(py_arg)
+    ...
+
+
+def make_falsy_default(param: a.AnnAssign) -> a.AnnAssign:
+    assert not param.value
+    param = copy(param)
+    match param.annotation:
+        case a.BinOp(_, a.BitOr(), a.Constant(None)):
+            param.value = a.Constant(None)
+        case a.Subscript(a.Name("tuple"), _):
+            param.value = a.Tuple([])
+
+
 def rewrap(help: str, **kw) -> str:
     # choose wrapping col which maximizes my aesthetic pleasure (no short final lines)
     return "\n".join(

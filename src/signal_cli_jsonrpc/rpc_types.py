@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum, auto
+from typing import TYPE_CHECKING, overload
+from warnings import deprecated
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -25,7 +27,7 @@ class CallMessage:
     answer_message: Answer | None = None
     busy_message: Busy | None = None
     hangup_message: Hangup | None = None
-    ice_update_messages: tuple[IceUpdate | None, ...]
+    ice_update_messages: tuple[IceUpdate | None, ...] = ()
 
     @dataclass(frozen=True, kw_only=True)
     class Offer:
@@ -179,6 +181,13 @@ class GroupInfo:
 @dataclass(frozen=True, kw_only=True)
 class Mention:
     name: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def name(self) -> str | None: ...
+
     number: str | None
     uuid: str | None
     start: int
@@ -188,6 +197,13 @@ class Mention:
 @dataclass(frozen=True, kw_only=True)
 class MessageEnvelope:
     source: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def source(self) -> str | None: ...
+
     source_number: str | None
     source_uuid: str | None
     source_name: str | None
@@ -222,6 +238,13 @@ class Preview:
 class Quote:
     id: int
     author: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def author(self) -> str | None: ...
+
     author_number: str | None
     author_uuid: str | None
     text: str | None
@@ -241,6 +264,13 @@ class QuotedAttachment:
 class Reaction:
     emoji: str | None
     target_author: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def target_author(self) -> str | None: ...
+
     target_author_number: str | None
     target_author_uuid: str | None
     target_sent_timestamp: int
@@ -335,12 +365,18 @@ class StoryMessage:
 
 
 @dataclass(frozen=True, kw_only=True)
-class SyncDataMessage:
+class SyncDataMessage(DataMessage):
     destination: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def destination(self) -> str | None: ...
+
     destination_number: str | None
     destination_uuid: str | None
     edit_message: EditMessage | None = None
-    data_message: DataMessage | None
 
 
 class SyncMessageType(StrEnum):
@@ -362,16 +398,22 @@ class SyncMessage:
 @dataclass(frozen=True, kw_only=True)
 class SyncReadMessage:
     sender: str | None
+    if TYPE_CHECKING:
+
+        @property
+        @overload
+        @deprecated("Deprecated")
+        def sender(self) -> str | None: ...
+
     sender_number: str | None
     sender_uuid: str | None
     timestamp: int
 
 
 @dataclass(frozen=True, kw_only=True)
-class SyncStoryMessage:
+class SyncStoryMessage(StoryMessage):
     destination_number: str | None
     destination_uuid: str | None
-    data_message: StoryMessage | None
 
 
 @dataclass(frozen=True, kw_only=True)
