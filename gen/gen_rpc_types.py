@@ -11,9 +11,14 @@ from caseutil import to_snake
 
 from .utils import PyImports, make_falsy_default, make_optional, py_dataclass_deco, val
 
-JAVA_JSON_TYPE_FILES = sorted(
-    Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/json/*.java")
-)
+GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+SIGNAL_CLI_PATH, SIGNAL_CLI_URL = [
+  Path(sh(
+        ["git", "config", "--file", f"{GIT_ROOT}/.gitmodules", f"submodule.signal-cli.{cfg}"], text=True
+    )).strip()
+    for cfg in ("path", "url")
+]
+JAVA_JSON_TYPE_FILES = sorted(Path(SIGNAL_CLI).glob("src/main/java/org/asamk/signal/json/*.java"))
 
 
 def main():
@@ -28,9 +33,9 @@ def gen() -> a.Module:
     py_imports = PyImports()
 
     py_decls = [
-        py_decl
+        annotate_source(py_decl, file)
         for file in JAVA_JSON_TYPE_FILES
-        if (java_prog_n := SgRoot(file.read_text(), "java").root())
+        if (java_prog_n := SgRoot((SIGNAL_CLI / file).read_text(), "java").root())
         for java_n in java_prog_n.children()
         if java_n.kind() not in ("package_declaration", "import_declaration")
         if (py_decl := get_py_decl(java_n, py_imports))
@@ -44,6 +49,18 @@ def gen() -> a.Module:
     py_body.extend(py_import_decls)
     py_body.extend(py_decls)
     return a.Module(py_body)
+
+
+def annotate_source(py_decl: a.ClassDef, src: Path):
+    """Add a comment as the first line of the class body"""
+    git_modfile = f"{GIT_ROOT}/.gitmodules"
+
+
+
+    src_url = git_repo_url + "/blob/" + 
+
+    src_doc = "Source: " + src_url
+    py_decl.body.insert(0, a.Constant(src_doc))
 
 
 def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None:
