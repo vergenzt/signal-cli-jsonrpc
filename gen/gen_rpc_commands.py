@@ -7,11 +7,14 @@ from operator import or_
 from pathlib import Path
 from subprocess import check_output as sh
 from textwrap import dedent, indent
-from typing import Iterator, cast
+from typing import Iterator, cast, get_args, get_origin
 
 from ast_grep_py import SgNode, SgRoot
 from caseutil import to_snake
 from ordered_set import OrderedSet
+
+import signal_cli_jsonrpc
+from signal_cli_jsonrpc.rpc_command_outputs import RPC_COMMAND_OUTPUT_TYPES
 
 from .utils import PyImports, human_str_list, make_required, py_dataclass_deco, rewrap, val
 
@@ -28,10 +31,6 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
         "Send": {"message_from_stdin"},
     },
 )
-
-
-# when printing, pretend it's a regular set
-OrderedSet.__str__ = lambda self: '{' + str(list(self))[1:-1] + '}'
 
 
 def main():
@@ -82,6 +81,19 @@ def get_py_decl(java_class_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef 
     if not (py_body := list(get_py_class_body(java_class_decl_n, py_name, py_imports))):
         return None
 
+    output_type = RPC_COMMAND_OUTPUT_TYPES[py_name]
+    if get_origin(output_type):  # it's generic
+        to_import = get_args(output_type)[0]
+        output_type_unqualified = repr(output_type).replace(f"{to_import.__module__}.", "")
+    else:
+        to_import = output_type
+        output_type_unqualified = output_type.__name__
+
+    py_imports.add(
+        to_import.__module__.removeprefix(signal_cli_jsonrpc.__name__),
+        to_import.__name__,
+    )
+
     py_class_decl = a.ClassDef(
         decorator_list=[py_dataclass_deco(py_imports)],
         name=py_name,
@@ -89,10 +101,7 @@ def get_py_decl(java_class_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef 
         keywords=[
             a.keyword(
                 "rpc_output_type",
-                (
-                    # todo: make this command-dependent
-                    py_imports.add(".rpc_session", "Empty")
-                ),
+                a.parse(output_type_unqualified, mode="eval").body,
             )
         ],
         body=py_body,
@@ -334,10 +343,11 @@ def get_py_class_init_impl(
     assert isinstance(init_impl, a.FunctionDef)
 
     for mutex in py_mutex_groups.values():
+        args_repr = repr(list(mutex.argnames))
         if mutex.required:
             init_impl.body += a.parse(
                 dedent(f"""
-                    match len(kwargs.keys() & (args := {list(mutex.argnames)!r})):
+                    match len(kwargs.keys() & (args := {args_repr})):
                         case 0:
                             raise ValueError(f"One of {{args!r}} is required!")
                         case 1:
@@ -349,7 +359,7 @@ def get_py_class_init_impl(
         else:
             init_impl.body += a.parse(
                 dedent(f"""
-                    match len(kwargs.keys() & (args := {mutex.argnames!r})):
+                    match len(kwargs.keys() & (args := {args_repr})):
                         case 0 | 1:
                             pass
                         case _:

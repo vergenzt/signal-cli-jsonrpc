@@ -1,7 +1,17 @@
 from dataclasses import MISSING, dataclass, fields
 from typing import Literal, overload
 
-from .rpc_session import Empty, RpcCommand
+from .rpc_command_outputs import (
+    Device,
+    Empty,
+    Identity,
+    JoinGroupResult,
+    UpdateGroupResult,
+    UploadStickerPackResult,
+    UserStatus,
+)
+from .rpc_session import RpcCommand
+from .rpc_types import AttachmentData, Contact
 
 type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]
 
@@ -58,7 +68,7 @@ class FinishChangeNumber(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetAttachment(RpcCommand, rpc_output_type=Empty):
+class GetAttachment(RpcCommand, rpc_output_type=AttachmentData):
     """
     Retrieve an already downloaded attachment base64 encoded.
 
@@ -95,7 +105,7 @@ class GetAttachment(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetAvatar(RpcCommand, rpc_output_type=Empty):
+class GetAvatar(RpcCommand, rpc_output_type=AttachmentData):
     """
     Retrieve the avatar of a contact, contact's profile or group base64 encoded.
 
@@ -135,7 +145,7 @@ class GetAvatar(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetSticker(RpcCommand, rpc_output_type=Empty):
+class GetSticker(RpcCommand, rpc_output_type=AttachmentData):
     """
     Retrieve the sticker of a sticker pack base64 encoded.
 
@@ -148,7 +158,7 @@ class GetSticker(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class GetUserStatus(RpcCommand, rpc_output_type=Empty):
+class GetUserStatus(RpcCommand, rpc_output_type=list[UserStatus]):
     """
     Check if the specified phone number/s have been registered
 
@@ -161,7 +171,7 @@ class GetUserStatus(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class JoinGroup(RpcCommand, rpc_output_type=Empty):
+class JoinGroup(RpcCommand, rpc_output_type=JoinGroupResult):
     """
     Join a group via an invitation link.
 
@@ -172,7 +182,7 @@ class JoinGroup(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ListContacts(RpcCommand, rpc_output_type=Empty):
+class ListContacts(RpcCommand, rpc_output_type=list[Contact]):
     """
     Show a list of known contacts with names and profiles.
 
@@ -194,7 +204,7 @@ class ListContacts(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ListDevices(RpcCommand, rpc_output_type=Empty):
+class ListDevices(RpcCommand, rpc_output_type=list[Device]):
     """
     Show a list of linked devices.
     """
@@ -215,7 +225,7 @@ class ListGroups(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ListIdentities(RpcCommand, rpc_output_type=Empty):
+class ListIdentities(RpcCommand, rpc_output_type=list[Identity]):
     """
     List all known identity keys and their trust status, fingerprint and safety number.
 
@@ -298,7 +308,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := OrderedSet(["hide", "forget"]))):
+        match len(kwargs.keys() & (args := ["hide", "forget"])):
             case 0 | 1:
                 pass
             case _:
@@ -573,8 +583,7 @@ class Trust(RpcCommand, rpc_output_type=Empty):
         )
         self.__dict__.update(kwargs)
         match len(
-            kwargs.keys()
-            & (args := OrderedSet(["trust_all_known_keys", "verified_safety_number"]))
+            kwargs.keys() & (args := ["trust_all_known_keys", "verified_safety_number"])
         ):
             case 0 | 1:
                 pass
@@ -669,9 +678,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(
-            kwargs.keys() & (args := OrderedSet(["username", "delete_username"]))
-        ):
+        match len(kwargs.keys() & (args := ["username", "delete_username"])):
             case 0 | 1:
                 pass
             case _:
@@ -722,7 +729,7 @@ class UpdateContact(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class UpdateGroup(RpcCommand, rpc_output_type=Empty):
+class UpdateGroup(RpcCommand, rpc_output_type=UpdateGroupResult):
     """
     Create or update a group.
 
@@ -827,7 +834,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
             {f.name: f.default for f in fields(self) if f.default != MISSING}
         )
         self.__dict__.update(kwargs)
-        match len(kwargs.keys() & (args := OrderedSet(["avatar", "remove_avatar"]))):
+        match len(kwargs.keys() & (args := ["avatar", "remove_avatar"])):
             case 0 | 1:
                 pass
             case _:
@@ -835,7 +842,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
 
 
 @dataclass(frozen=True, kw_only=True)
-class UploadStickerPack(RpcCommand, rpc_output_type=Empty):
+class UploadStickerPack(RpcCommand, rpc_output_type=UploadStickerPackResult):
     """
     Upload a new sticker pack, consisting of a manifest file and the stickers images.
 

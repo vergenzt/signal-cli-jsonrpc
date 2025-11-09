@@ -1,8 +1,8 @@
 import json
 import os
-from abc import ABC
+from abc import ABC, ABCMeta
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Self
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, ClassVar, Never, Self
 from uuid import uuid7
 
 from aiohttp import ClientSession
@@ -11,29 +11,23 @@ from attr import field
 from caseutil import to_camel, to_snake
 from dacite import from_dict
 
-from . import Error, MessageEnvelope
+from .rpc_types import Error, MessageEnvelope
 
 
-# signal-cli returns `{}` in `result` for these commands so this mirrors that.
-# ref: https://github.com/AsamK/signal-cli/blob/3b784aa32be92b448d93fafb1cbe0727ad1d24eb/src/main/java/org/asamk/signal/jsonrpc/SignalJsonRpcCommandHandler.java#L275
-@dataclass
-class Empty:
-    """
-    Output type for commands which produce no output.
-    """
+
+class RpcCommandMeta[T](ABCMeta):
+    rpc_method: str
+    rpc_output_type: type[T]
+
+    def __init__(cls, rpc_output_type: type[T]):
+        cls.rpc_method = cls.__name__[0].upper() + cls.__name__[1:]
+        cls.rpc_output_type = rpc_output_type
+    
 
 
 @dataclass(frozen=True)
-class RpcCommand[T](ABC):
-    """Abstract base class for RPC commands."""
-
-    @classmethod
-    def __init_subclass__(cls, *, rpc_output_type: type[T]):
-        cls.rpc_method: str = cls.__name__[0].upper() + cls.__name__[1:]
-        cls.rpc_output_type = rpc_output_type
-
-    def __new__(cls) -> None:
-        raise NotImplementedError("Do not instantiate this class directly")
+class RpcCommand(metaclass=RpcCommandMeta):
+    """Abstract base class for RPC commands. Subclasses must pass `rpc_output_type` parameter."""
 
 
 @dataclass(frozen=True)
