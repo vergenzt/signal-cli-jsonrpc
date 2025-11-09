@@ -1,5 +1,7 @@
 import ast as a
 import builtins as b
+from configparser import ConfigParser
+from copy import deepcopy
 from itertools import chain
 from pathlib import Path
 from subprocess import check_output as sh
@@ -12,13 +14,19 @@ from caseutil import to_snake
 from .utils import PyImports, make_falsy_default, make_optional, py_dataclass_deco, val
 
 GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-SIGNAL_CLI_PATH, SIGNAL_CLI_URL = [
-  Path(sh(
-        ["git", "config", "--file", f"{GIT_ROOT}/.gitmodules", f"submodule.signal-cli.{cfg}"], text=True
-    )).strip()
-    for cfg in ("path", "url")
-]
-JAVA_JSON_TYPE_FILES = sorted(Path(SIGNAL_CLI).glob("src/main/java/org/asamk/signal/json/*.java"))
+
+
+def signal_submodule_config(key: str) -> str:
+    return sh(
+        ["git", "config", "--file", GIT_ROOT / ".gitmodules", f"submodule.signal-cli.{key}"],
+        text=True,
+    ).strip()
+
+
+SIGNAL_CLI_PATH = GIT_ROOT / signal_submodule_config("path")
+SIGNAL_CLI_URL = signal_submodule_config("url")
+
+JAVA_JSON_TYPE_FILES = sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/json/*.java"))
 
 
 def main():
@@ -35,7 +43,7 @@ def gen() -> a.Module:
     py_decls = [
         annotate_source(py_decl, file)
         for file in JAVA_JSON_TYPE_FILES
-        if (java_prog_n := SgRoot((SIGNAL_CLI / file).read_text(), "java").root())
+        if (java_prog_n := SgRoot(file.read_text(), "java").root())
         for java_n in java_prog_n.children()
         if java_n.kind() not in ("package_declaration", "import_declaration")
         if (py_decl := get_py_decl(java_n, py_imports))
@@ -51,16 +59,20 @@ def gen() -> a.Module:
     return a.Module(py_body)
 
 
-def annotate_source(py_decl: a.ClassDef, src: Path):
+def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
     """Add a comment as the first line of the class body"""
-    git_modfile = f"{GIT_ROOT}/.gitmodules"
 
+    src_rel = src.relative_to(SIGNAL_CLI_PATH)
+    src_latest_commit_sha = sh(
+        ["git", "rev-list", "-1", "HEAD", "--", src_rel], text=True, cwd=SIGNAL_CLI_PATH
+    ).strip()
+    src_url = f"{SIGNAL_CLI_URL}/blob/{src_latest_commit_sha}/{src_rel}"
+    src_doc = "\nSource: " + src_url + "\n"
+    
+    py_decl = deepcopy(py_decl)
+    py_decl.body.insert(0, a.Expr(a.Constant(src_doc)))
 
-
-    src_url = git_repo_url + "/blob/" + 
-
-    src_doc = "Source: " + src_url
-    py_decl.body.insert(0, a.Constant(src_doc))
+    return py_decl
 
 
 def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None:
