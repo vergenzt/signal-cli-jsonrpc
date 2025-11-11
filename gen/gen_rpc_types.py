@@ -67,8 +67,8 @@ def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
         ["git", "rev-list", "-1", "HEAD", "--", src_rel], text=True, cwd=SIGNAL_CLI_PATH
     ).strip()
     src_url = f"{SIGNAL_CLI_URL}/blob/{src_latest_commit_sha}/{src_rel}"
-    src_doc = "\nSource: " + src_url + "\n"
-    
+    src_doc = "\n".join(("", "Source:", src_url, ""))
+
     py_decl = deepcopy(py_decl)
     py_decl.body.insert(0, a.Expr(a.Constant(src_doc)))
 
