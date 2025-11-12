@@ -264,7 +264,8 @@ def get_py_class_docstring(
             # use new sort order (args with defaults pushed to the end) for arg helptext order
             py_args_help = "\n".join(
                 rewrap(
-                    f":param {arg_name}: {py_arg_helps.get(arg_name, '')}", subsequent_indent="    "
+                    f":param {arg_name}: {py_arg_helps.get(arg_name, '')}",
+                    subsequent_indent="    ",
                 )
                 for arg_name in py_arg_names_ordered
             )

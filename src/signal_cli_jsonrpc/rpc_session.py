@@ -1,8 +1,8 @@
 import json
 import os
-from abc import ABC, ABCMeta
+from abc import ABCMeta
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, ClassVar, Never, Self
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Self
 from uuid import uuid7
 
 from aiohttp import ClientSession
@@ -14,7 +14,6 @@ from dacite import from_dict
 from .rpc_types import Error, MessageEnvelope
 
 
-
 class RpcCommandMeta[T](ABCMeta):
     rpc_method: str
     rpc_output_type: type[T]
@@ -22,7 +21,6 @@ class RpcCommandMeta[T](ABCMeta):
     def __init__(cls, rpc_output_type: type[T]):
         cls.rpc_method = cls.__name__[0].upper() + cls.__name__[1:]
         cls.rpc_output_type = rpc_output_type
-    
 
 
 @dataclass(frozen=True)

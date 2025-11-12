@@ -11,8 +11,8 @@ tasks:
 
   check:
     cmds:
-    - python -m gen.gen_rpc_types | git diff --no-index -- src/{{.PKG_NAME}}/rpc_types.py -
-    - python -m gen.gen_rpc_commands | git diff --no-index -- src/{{.PKG_NAME}}/rpc_commands.py -
+    - python -m gen.gen_rpc_types | git diff --no-index -w -- src/{{.PKG_NAME}}/rpc_types.py -
+    - python -m gen.gen_rpc_commands | git diff --no-index -w -- src/{{.PKG_NAME}}/rpc_commands.py -
 
   rpc_types: >
     python -m gen.gen_rpc_types > ${tmp:=$(mktemp -u)}

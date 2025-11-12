@@ -1,0 +1,31 @@
+# https://lefthook.dev/configuration/
+
+[pre-commit]
+parallel = true
+
+[[pre-commit.jobs]]
+run = "check-added-large-files"
+
+[[pre-commit.jobs]]
+run = "check-vcs-permalinks"
+
+[[pre-commit.jobs]]
+run = "check-yaml"
+
+[[pre-commit.jobs]]
+run = "end-of-file-fixer"
+
+[[pre-commit.jobs]]
+run = "mixed-line-ending"
+
+[[pre-commit.jobs]]
+run = "trailing-whitespace-fixer"
+
+[[pre-commit.jobs]]
+run = "ruff check"
+
+[[pre-commit.jobs]]
+run = "ruff format"
+
+[[pre-commit.jobs]]
+run = "task check"

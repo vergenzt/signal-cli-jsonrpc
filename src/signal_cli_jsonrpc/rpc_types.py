@@ -603,4 +603,3 @@ class TypingMessage:
     action: str | None
     timestamp: int
     group_id: str | None = None
-

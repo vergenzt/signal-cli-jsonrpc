@@ -46,7 +46,8 @@ def rewrap(help: str, **kw) -> str:
     # choose wrapping col which maximizes my aesthetic pleasure (no short final lines)
     return "\n".join(
         max(
-            (_wrap(help, c, **kw) for c in [80, 90, 100, 70]), key=lambda lines: len(lines[-1]) > 25
+            (_wrap(help, c, **kw) for c in [80, 90, 100, 70]),
+            key=lambda lines: len(lines[-1]) > 25,
         )
     )
 
@@ -82,7 +83,13 @@ GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"]).strip())
 
 def signal_submodule_config(key: str) -> str:
     return sh(
-        ["git", "config", "--file", GIT_ROOT / ".gitmodules", f"submodule.signal-cli.{key}"]
+        [
+            "git",
+            "config",
+            "--file",
+            GIT_ROOT / ".gitmodules",
+            f"submodule.signal-cli.{key}",
+        ]
     ).strip()
 
 
@@ -111,5 +118,6 @@ def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
 def gen_py_src(py_ast: a.AST) -> str:
     py_src = a.unparse(py_ast)
     py_src = sh(["ruff", "format", "-"], input=py_src)
-    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], input=py_src)
+    py_src = sh(["ruff", "check", "--quiet", "--extend-select=I", "--fix", "-"], input=py_src)
+    py_src = py_src.rstrip()
     return py_src

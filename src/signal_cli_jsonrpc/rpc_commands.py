@@ -22,6 +22,9 @@ class AddDevice(RpcCommand, rpc_output_type=Empty):
     Link another device to this device. Only works, if this is the primary device.
 
     :param uri: Specify the uri contained in the QR code shown by the new device.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/AddDeviceCommand.java
     """
 
     uri: str
@@ -34,6 +37,9 @@ class AddStickerPack(RpcCommand, rpc_output_type=Empty):
 
     :param uris: Specify the uri of the sticker pack. (e.g.
         https://signal.art/addstickers/#pack_id=XXX&pack_key=XXX)
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/AddStickerPackCommand.java
     """
 
     uris: NonEmptyTuple[str]
@@ -46,6 +52,9 @@ class Block(RpcCommand, rpc_output_type=Empty):
 
     :param recipients: Contact number
     :param group_ids: Group ID
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/BlockCommand.java
     """
 
     recipients: tuple[str, ...] = ()
@@ -60,6 +69,9 @@ class FinishChangeNumber(RpcCommand, rpc_output_type=Empty):
     :param number: The new phone number in E164 format.
     :param verification_code: The verification code you received via sms or voice call.
     :param pin: The registration lock PIN, that was set by the user (Optional)
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/a0d5744c4945791eb57436d0f1288b09bd41132a/src/main/java/org/asamk/signal/commands/FinishChangeNumberCommand.java
     """
 
     number: str
@@ -78,6 +90,9 @@ class GetAttachment(RpcCommand, rpc_output_type=AttachmentData):
     :param id: The ID of the attachment file.
     :param recipient: Sender of the attachment
     :param group_id: Group in which the attachment was received
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/GetAttachmentCommand.java
     """
 
     id: str
@@ -91,9 +106,7 @@ class GetAttachment(RpcCommand, rpc_output_type=AttachmentData):
     def __init__(self, *, id: str, group_id: str): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := ["recipient", "group_id"])):
             case 0:
@@ -115,6 +128,9 @@ class GetAvatar(RpcCommand, rpc_output_type=AttachmentData):
     :param contact: Get a contact avatar
     :param profile: Get a profile avatar
     :param group_id: Get a group avatar
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/61bc30eb43b0b156bf271815b4510fe1759086f1/src/main/java/org/asamk/signal/commands/GetAvatarCommand.java
     """
 
     contact: str | None = None
@@ -131,9 +147,7 @@ class GetAvatar(RpcCommand, rpc_output_type=AttachmentData):
     def __init__(self, *, group_id: str): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := ["contact", "profile", "group_id"])):
             case 0:
@@ -151,6 +165,9 @@ class GetSticker(RpcCommand, rpc_output_type=AttachmentData):
 
     :param pack_id: The ID of the sticker pack.
     :param sticker_id: The ID of the sticker.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/GetStickerCommand.java
     """
 
     pack_id: str
@@ -164,6 +181,9 @@ class GetUserStatus(RpcCommand, rpc_output_type=list[UserStatus]):
 
     :param recipients: Phone number
     :param usernames: Specify the recipient username or username link.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/ca33249170118be0d2fe3e9deed4ad23b34ac875/src/main/java/org/asamk/signal/commands/GetUserStatusCommand.java
     """
 
     recipients: tuple[str, ...] = ()
@@ -176,6 +196,9 @@ class JoinGroup(RpcCommand, rpc_output_type=JoinGroupResult):
     Join a group via an invitation link.
 
     :param uri: Specify the uri with the group invitation link.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/JoinGroupCommand.java
     """
 
     uri: str
@@ -193,6 +216,9 @@ class ListContacts(RpcCommand, rpc_output_type=list[Contact]):
     :param name: Find contacts with the given contact or profile name.
     :param detailed: List the contacts with more details. If output=json, then this is always set
     :param internal: Include internal information that's normally not user visible
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListContactsCommand.java
     """
 
     recipients: tuple[str, ...] = ()
@@ -207,6 +233,9 @@ class ListContacts(RpcCommand, rpc_output_type=list[Contact]):
 class ListDevices(RpcCommand, rpc_output_type=list[Device]):
     """
     Show a list of linked devices.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListDevicesCommand.java
     """
 
 
@@ -218,6 +247,9 @@ class ListGroups(RpcCommand, rpc_output_type=Empty):
     :param detailed: List the members and group invite links of each group. If
         output=json, then this is always set
     :param group_ids: Specify one or more group IDs to show.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/a22af8303a987905a3a6fb5ab78af11a2dc05b58/src/main/java/org/asamk/signal/commands/ListGroupsCommand.java
     """
 
     detailed: bool = False
@@ -230,6 +262,9 @@ class ListIdentities(RpcCommand, rpc_output_type=list[Identity]):
     List all known identity keys and their trust status, fingerprint and safety number.
 
     :param number: Only show identity keys for the given phone number.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListIdentitiesCommand.java
     """
 
     number: str | None = None
@@ -239,6 +274,9 @@ class ListIdentities(RpcCommand, rpc_output_type=list[Identity]):
 class ListStickerPacks(RpcCommand, rpc_output_type=Empty):
     """
     Show a list of known sticker packs.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListStickerPacksCommand.java
     """
 
 
@@ -251,6 +289,9 @@ class QuitGroup(RpcCommand, rpc_output_type=Empty):
     :param delete: Delete local group data completely after quitting group.
     :param admins: Specify one or more members to make a group admin, required if
         you're currently the only admin.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/QuitGroupCommand.java
     """
 
     group_id: str
@@ -268,6 +309,9 @@ class RemoteDelete(RpcCommand, rpc_output_type=Empty):
     :param recipients: Specify the recipients' phone number.
     :param usernames: Specify the recipient username or username link.
     :param note_to_self:
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/RemoteDeleteCommand.java
     """
 
     target_timestamp: int
@@ -288,6 +332,9 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
     :param recipient: Contact number
     :param hide: Hide the contact in the contact list, but keep the data.
     :param forget: Delete all data associated with this contact, including identity keys and sessions.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/RemoveContactCommand.java
     """
 
     recipient: str | None = None
@@ -304,9 +351,7 @@ class RemoveContact(RpcCommand, rpc_output_type=Empty):
     def __init__(self, *, recipient: str | None = ..., forget: Literal[True]): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := ["hide", "forget"])):
             case 0 | 1:
@@ -321,6 +366,9 @@ class RemoveDevice(RpcCommand, rpc_output_type=Empty):
     Remove a linked device.
 
     :param device_id: Specify the device you want to remove. Use listDevices to see the deviceIds.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/RemoveDeviceCommand.java
     """
 
     device_id: int
@@ -330,6 +378,9 @@ class RemoveDevice(RpcCommand, rpc_output_type=Empty):
 class RemovePin(RpcCommand, rpc_output_type=Empty):
     """
     Remove the registration lock pin.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/RemovePinCommand.java
     """
 
 
@@ -374,6 +425,9 @@ class Send(RpcCommand, rpc_output_type=Empty):
     :param story_author: Specify the number of the author of the story.
     :param edit_timestamp: Specify the timestamp of a previous message with the
         recipient or group to send an edited message.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/3e981d66e9534db61953078b3ca8faf16ed9dd2d/src/main/java/org/asamk/signal/commands/SendCommand.java
     """
 
     recipients: tuple[str, ...] = ()
@@ -407,6 +461,9 @@ class Send(RpcCommand, rpc_output_type=Empty):
 class SendContacts(RpcCommand, rpc_output_type=Empty):
     """
     Send a synchronization message with the local contacts list to all linked devices.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendContactsCommand.java
     """
 
 
@@ -419,6 +476,9 @@ class SendMessageRequestResponse(RpcCommand, rpc_output_type=Empty):
     :param group_ids: Specify the recipient group ID.
     :param recipients: Specify the recipients' phone number.
     :param usernames: Specify the recipient username or username link.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendMessageRequestResponseCommand.java
     """
 
     type: Literal[("accept", "delete")]
@@ -435,6 +495,9 @@ class SendPaymentNotification(RpcCommand, rpc_output_type=Empty):
     :param receipt: The base64 encoded receipt blob.
     :param recipient: Specify the recipient's phone number.
     :param note: Specify a note for the payment notification.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendPaymentNotificationCommand.java
     """
 
     receipt: str
@@ -456,6 +519,9 @@ class SendReaction(RpcCommand, rpc_output_type=Empty):
     :param note_to_self: Send the reaction to self without notification.
     :param remove: Remove a reaction.
     :param story: React to a story instead of a normal message
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/fe752e0c7998bc8ca66c46d981624e6fbce7abf9/src/main/java/org/asamk/signal/commands/SendReactionCommand.java
     """
 
     emoji: str
@@ -478,6 +544,9 @@ class SendReceipt(RpcCommand, rpc_output_type=Empty):
     :param target_timestamps: Specify the timestamp of the messages for which a
         receipt should be sent.
     :param type: Specify the receipt type (default is read receipt).
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendReceiptCommand.java
     """
 
     recipient: str
@@ -489,6 +558,9 @@ class SendReceipt(RpcCommand, rpc_output_type=Empty):
 class SendSyncRequest(RpcCommand, rpc_output_type=Empty):
     """
     Send a synchronization request message to primary device (for group, contacts, ...).
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendSyncRequestCommand.java
     """
 
 
@@ -501,6 +573,9 @@ class SendTyping(RpcCommand, rpc_output_type=Empty):
     :param group_ids: Specify the recipient group ID.
     :param recipients: Specify the recipients' phone number.
     :param stop: Send a typing STOP message.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SendTypingCommand.java
     """
 
     group_ids: tuple[str, ...] = ()
@@ -515,6 +590,9 @@ class SetPin(RpcCommand, rpc_output_type=Empty):
 
     :param pin: The registration lock PIN, that will be required for new
         registrations (resets after 7 days of inactivity)
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/SetPinCommand.java
     """
 
     pin: str | None = None
@@ -529,6 +607,9 @@ class StartChangeNumber(RpcCommand, rpc_output_type=Empty):
     :param voice: The verification should be done over voice, not SMS.
     :param captcha: The captcha token, required if change number failed with a
         captcha required error.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/StartChangeNumberCommand.java
     """
 
     number: str
@@ -544,6 +625,9 @@ class SubmitRateLimitChallenge(RpcCommand, rpc_output_type=Empty):
 
     :param challenge: The challenge token taken from the proof required error.
     :param captcha: The captcha token from the solved captcha on the signal website.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/189b21dbde0b9981365ee6e39e3645b94d634ef6/src/main/java/org/asamk/signal/commands/SubmitRateLimitChallengeCommand.java
     """
 
     challenge: str
@@ -562,6 +646,9 @@ class Trust(RpcCommand, rpc_output_type=Empty):
     :param trust_all_known_keys: Trust all known keys of this user, only use this for testing.
     :param verified_safety_number: Specify the safety number of the key, only use
         this option if you have verified the safety number.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/TrustCommand.java
     """
 
     recipient: str
@@ -578,13 +665,9 @@ class Trust(RpcCommand, rpc_output_type=Empty):
     def __init__(self, *, recipient: str, verified_safety_number: str): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
-        match len(
-            kwargs.keys() & (args := ["trust_all_known_keys", "verified_safety_number"])
-        ):
+        match len(kwargs.keys() & (args := ["trust_all_known_keys", "verified_safety_number"])):
             case 0 | 1:
                 pass
             case _:
@@ -598,6 +681,9 @@ class Unblock(RpcCommand, rpc_output_type=Empty):
 
     :param recipients: Contact number
     :param group_ids: Group ID
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UnblockCommand.java
     """
 
     recipients: tuple[str, ...] = ()
@@ -611,6 +697,9 @@ class Unregister(RpcCommand, rpc_output_type=Empty):
 
     :param delete_account: Delete account completely from server. CAUTION: Only do
         this if you won't use this number again!
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UnregisterCommand.java
     """
 
     delete_account: bool = False
@@ -632,6 +721,9 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     :param number_sharing: Indicates if Signal should share its phone number when sending a message.
     :param username: Specify a username that can then be used to contact this account.
     :param delete_username: Delete the username associated with this account.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UpdateAccountCommand.java
     """
 
     device_name: str | None = None
@@ -674,9 +766,7 @@ class UpdateAccount(RpcCommand, rpc_output_type=Empty):
     ): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := ["username", "delete_username"])):
             case 0 | 1:
@@ -695,6 +785,9 @@ class UpdateConfiguration(RpcCommand, rpc_output_type=Empty):
         unidentified delivery indicators.
     :param typing_indicators: Indicates if Signal should send/show typing indicators.
     :param link_previews: Indicates if Signal should generate link previews.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UpdateConfigurationCommand.java
     """
 
     read_receipts: bool | None = None
@@ -716,6 +809,9 @@ class UpdateContact(RpcCommand, rpc_output_type=Empty):
     :param nick_family_name: New nick family name
     :param note: New note
     :param expiration: Set expiration time of messages (seconds)
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/1af03e3e16d77820d64e034e926795e4cb6f7c8a/src/main/java/org/asamk/signal/commands/UpdateContactCommand.java
     """
 
     recipient: str | None = None
@@ -749,6 +845,9 @@ class UpdateGroup(RpcCommand, rpc_output_type=UpdateGroupResult):
     :param set_permission_edit_details: Set permission to edit group details
     :param set_permission_send_messages: Set permission to send messages
     :param expiration: Set expiration time of messages (seconds)
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UpdateGroupCommand.java
     """
 
     group_id: str | None = None
@@ -784,6 +883,9 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     :param mobile_coin_address: New MobileCoin address (Base64 encoded public address)
     :param avatar: Path to new profile avatar
     :param remove_avatar:
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/a6ec71dc315e5b259a7bfe70cad46b7780b73fa9/src/main/java/org/asamk/signal/commands/UpdateProfileCommand.java
     """
 
     given_name: str | None = None
@@ -830,9 +932,7 @@ class UpdateProfile(RpcCommand, rpc_output_type=Empty):
     ): ...
 
     def __init__(self, **kwargs):
-        self.__dict__.update(
-            {f.name: f.default for f in fields(self) if f.default != MISSING}
-        )
+        self.__dict__.update({f.name: f.default for f in fields(self) if f.default != MISSING})
         self.__dict__.update(kwargs)
         match len(kwargs.keys() & (args := ["avatar", "remove_avatar"])):
             case 0 | 1:
@@ -848,7 +948,9 @@ class UploadStickerPack(RpcCommand, rpc_output_type=UploadStickerPackResult):
 
     :param path: The path of the manifest.json or a zip file containing the sticker
         pack you wish to upload.
+
+    Source:
+    https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/UploadStickerPackCommand.java
     """
 
     path: str | None = None
-

@@ -17,8 +17,14 @@ dev = [
     "go-task-bin>=3.45.4",
     "ast-grep-py>=0.39.6",
     "ordered-set>=4.1.0",
+    "yamlfix>=1.19.0",
+    "lefthook>=2.0.3",
+    "pre-commit-hooks>=6.0.0",
 ]
 
 [build-system]
 requires = ["uv_build>=0.8.19,<0.9.0"]
 build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
