@@ -1,10 +1,14 @@
 import ast as a
 import builtins as b
 from collections import defaultdict
-from copy import copy
+from copy import copy, deepcopy
 from functools import partial
-from textwrap import wrap
+from pathlib import Path
+from subprocess import check_output
+from textwrap import dedent, wrap
 from typing import Literal, Sequence
+
+sh = partial(check_output, text=True)
 
 _wrap = partial(wrap, break_long_words=False, break_on_hyphens=False)
 
@@ -36,21 +40,6 @@ def make_required(py_arg: a.AnnAssign, py_imports: PyImports) -> a.AnnAssign:
             py_arg.annotation = a.Subscript(a.Name("NonEmptyTuple"), main_type)
 
     return py_arg
-
-
-def make_optional(py_arg: a.AnnAssign) -> a.AnnAssign:
-    py_arg = copy(py_arg)
-    ...
-
-
-def make_falsy_default(param: a.AnnAssign) -> a.AnnAssign:
-    assert not param.value
-    param = copy(param)
-    match param.annotation:
-        case a.BinOp(_, a.BitOr(), a.Constant(None)):
-            param.value = a.Constant(None)
-        case a.Subscript(a.Name("tuple"), _):
-            param.value = a.Tuple([])
 
 
 def rewrap(help: str, **kw) -> str:
@@ -86,3 +75,41 @@ def py_dataclass_deco(py_imports: PyImports) -> a.expr:
             a.keyword("kw_only", a.Constant(True)),
         ],
     )
+
+
+GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"]).strip())
+
+
+def signal_submodule_config(key: str) -> str:
+    return sh(
+        ["git", "config", "--file", GIT_ROOT / ".gitmodules", f"submodule.signal-cli.{key}"]
+    ).strip()
+
+
+SIGNAL_CLI_PATH = GIT_ROOT / signal_submodule_config("path")
+SIGNAL_CLI_URL = signal_submodule_config("url")
+
+
+def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
+    """Add a comment as the first line of the class body"""
+
+    src_rel = src.relative_to(SIGNAL_CLI_PATH)
+    src_sha = sh(["git", "rev-list", "-1", "HEAD", "--", src_rel], cwd=SIGNAL_CLI_PATH).strip()
+    src_url = f"{SIGNAL_CLI_URL}/blob/{src_sha}/{src_rel}"
+    src_doc = "\n".join(("", "Source:", src_url, ""))
+
+    py_decl = deepcopy(py_decl)
+    match py_decl.body:
+        case [a.Expr(a.Constant(str() as docstring)), *_]:
+            py_decl.body[0] = a.Expr(a.Constant(dedent(docstring) + src_doc))
+        case _:
+            py_decl.body.insert(0, a.Expr(a.Constant(src_doc)))
+
+    return py_decl
+
+
+def gen_py_src(py_ast: a.AST) -> str:
+    py_src = a.unparse(py_ast)
+    py_src = sh(["ruff", "format", "-"], input=py_src)
+    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], input=py_src)
+    return py_src

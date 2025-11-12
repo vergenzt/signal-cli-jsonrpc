@@ -1,39 +1,24 @@
 import ast as a
-import builtins as b
-from configparser import ConfigParser
-from copy import deepcopy
-from itertools import chain
-from pathlib import Path
-from subprocess import check_output as sh
 from textwrap import dedent
-from typing import Iterator, cast
 
 from ast_grep_py import SgNode, SgRoot
 from caseutil import to_snake
 
-from .utils import PyImports, make_falsy_default, make_optional, py_dataclass_deco, val
-
-GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-
-
-def signal_submodule_config(key: str) -> str:
-    return sh(
-        ["git", "config", "--file", GIT_ROOT / ".gitmodules", f"submodule.signal-cli.{key}"],
-        text=True,
-    ).strip()
-
-
-SIGNAL_CLI_PATH = GIT_ROOT / signal_submodule_config("path")
-SIGNAL_CLI_URL = signal_submodule_config("url")
+from .utils import (
+    SIGNAL_CLI_PATH,
+    PyImports,
+    annotate_source,
+    gen_py_src,
+    py_dataclass_deco,
+    val,
+)
 
 JAVA_JSON_TYPE_FILES = sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/json/*.java"))
 
 
 def main():
     py_ast = gen()
-    py_src = a.unparse(py_ast)
-    py_src = sh(["ruff", "format", "-"], text=True, input=py_src)
-    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], text=True, input=py_src)
+    py_src = gen_py_src(py_ast)
     print(py_src)
 
 
@@ -57,22 +42,6 @@ def gen() -> a.Module:
     py_body.extend(py_import_decls)
     py_body.extend(py_decls)
     return a.Module(py_body)
-
-
-def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
-    """Add a comment as the first line of the class body"""
-
-    src_rel = src.relative_to(SIGNAL_CLI_PATH)
-    src_latest_commit_sha = sh(
-        ["git", "rev-list", "-1", "HEAD", "--", src_rel], text=True, cwd=SIGNAL_CLI_PATH
-    ).strip()
-    src_url = f"{SIGNAL_CLI_URL}/blob/{src_latest_commit_sha}/{src_rel}"
-    src_doc = "\n".join(("", "Source:", src_url, ""))
-
-    py_decl = deepcopy(py_decl)
-    py_decl.body.insert(0, a.Expr(a.Constant(src_doc)))
-
-    return py_decl
 
 
 def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None:

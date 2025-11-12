@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from functools import reduce
 from itertools import product, takewhile
 from operator import or_
-from pathlib import Path
-from subprocess import check_output as sh
 from textwrap import dedent, indent
 from typing import Iterator, cast, get_args, get_origin
 
@@ -16,11 +14,19 @@ from ordered_set import OrderedSet
 import signal_cli_jsonrpc
 from signal_cli_jsonrpc.rpc_command_outputs import RPC_COMMAND_OUTPUT_TYPES
 
-from .utils import PyImports, human_str_list, make_required, py_dataclass_deco, rewrap, val
-
-JAVA_COMMAND_FILES = sorted(
-    Path(__file__).parent.glob("../signal-cli/src/main/java/org/asamk/signal/commands/*.java")
+from .utils import (
+    SIGNAL_CLI_PATH,
+    PyImports,
+    annotate_source,
+    gen_py_src,
+    human_str_list,
+    make_required,
+    py_dataclass_deco,
+    rewrap,
+    val,
 )
+
+JAVA_COMMAND_FILES = sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/commands/*.java"))
 
 RPC_COMMAND_IFACE_NAME = "JsonRpcLocalCommand"
 
@@ -35,9 +41,7 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
 
 def main():
     py_ast = gen()
-    py_src = a.unparse(py_ast)
-    py_src = sh(["ruff", "format", "-"], text=True, input=py_src)
-    py_src = sh(["ruff", "check", "--quiet", "--select=I", "--fix", "-"], text=True, input=py_src)
+    py_src = gen_py_src(py_ast)
     print(py_src)
 
 
@@ -49,7 +53,7 @@ def gen() -> a.Module:
     ]
 
     py_decls = [
-        py_decl
+        annotate_source(py_decl, file)
         for file in JAVA_COMMAND_FILES
         if (java_prog_n := SgRoot(file.read_text(), "java").root())
         for java_n in java_prog_n.children()
