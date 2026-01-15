@@ -12,7 +12,6 @@ from attr import field
 from caseutil import to_camel, to_snake
 from dacite import from_dict
 
-from .outputs import Empty
 from .types import Error, MessageEnvelope
 from .utils import dict_transform_keys
 
@@ -50,7 +49,7 @@ class _RpcCommandMeta[OutputType](ABCMeta):
 
 
 @dataclass(frozen=True)
-class RpcCommand[OutputType = Empty](metaclass=_RpcCommandMeta):
+class RpcCommand[OutputType](metaclass=_RpcCommandMeta):
     """Abstract base class for RPC commands. Subclasses must specify `OutputType` type parameter."""
 
     async def do(self, session: SignalCliRPCSession) -> RpcResponse[OutputType]:
@@ -98,10 +97,18 @@ class _RpcMessageWrapper[T: RpcMessage]:
 
 
 @dataclass
-class SignalCliEvent:
+class MessageError:
     account: str
     error: Error | None
+
+
+@dataclass
+class Message:
+    account: str
     envelope: MessageEnvelope | None
+
+
+type MessageOrError = Message | MessageError
 
 
 class SignalCliRPCSession(ClientSession):
@@ -114,17 +121,17 @@ class SignalCliRPCSession(ClientSession):
         async def __aenter__(self) -> Self: ...
 
     @property
-    async def signal_cli_events(self) -> AsyncIterator[SignalCliEvent]:
+    async def signal_cli_events(self) -> AsyncIterator[MessageOrError]:
         async with EventSource("events", session=self) as sse_events:
             async for sse_event in sse_events:
-                signal_event = from_dict(SignalCliEvent, json.loads(sse_event.data))
+                signal_event = from_dict(MessageOrError, json.loads(sse_event.data))
                 yield signal_event
 
     async def rpc[OutputT](self, command: RpcCommand[OutputT]) -> RpcResponse[OutputT]:
         request = RpcRequest(command._rpc_method_name, command)
         response_obj = await self.post("rpc", json=dict_transform_keys(to_camel, asdict(request)))
         response_dict = dict_transform_keys(to_snake, await response_obj.json())
-        output_type = command.rpc_output_type
+        output_type = command._rpc_output_type
         response = from_dict(_RpcMessageWrapper[RpcResponse[output_type]], response_dict)._
         assert response.id == request.id
         return response

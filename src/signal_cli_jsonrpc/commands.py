@@ -11,8 +11,8 @@ from .outputs import (
     UploadStickerPackResult,
     UserStatus,
 )
-from .session import RpcCommand
-from .types import AttachmentData, Contact
+from .session import MessageOrError, RpcCommand
+from .types import AttachmentData, Contact, StickerPack
 from .utils import NonEmptyTuple
 
 
@@ -60,6 +60,22 @@ class Block(RpcCommand[Empty]):
     "Contact number"
     group_ids: tuple[str, ...] = ()
     "Group ID"
+
+
+@dataclass(frozen=True, kw_only=True)
+class DeleteLocalAccountData(RpcCommand[Empty]):
+    """
+    Delete all local data for this account. Data should only be deleted if the
+    account is unregistered. CAUTION: This cannot be undone.
+
+    :param ignore_registered: Delete the account data even though the account is
+        still registered on the Signal servers.
+
+    *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/DeleteLocalAccountDataCommand.java)]*
+    """
+
+    ignore_registered: bool = False
+    "Delete the account data even though the account is still registered on the Signal servers."
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -214,6 +230,15 @@ class JoinGroup(RpcCommand[JoinGroupResult]):
 
 
 @dataclass(frozen=True, kw_only=True)
+class ListAccounts(RpcCommand[Empty]):
+    """
+    Show a list of registered accounts.
+
+    *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListAccountsCommand.java)]*
+    """
+
+
+@dataclass(frozen=True, kw_only=True)
 class ListContacts(RpcCommand[list[Contact]]):
     """
     Show a list of known contacts with names and profiles.
@@ -278,7 +303,7 @@ class ListIdentities(RpcCommand[list[Identity]]):
 
 
 @dataclass(frozen=True, kw_only=True)
-class ListStickerPacks(RpcCommand[Empty]):
+class ListStickerPacks(RpcCommand[list[StickerPack]]):
     """
     Show a list of known sticker packs.
 
@@ -305,6 +330,54 @@ class QuitGroup(RpcCommand[Empty]):
     "Delete local group data completely after quitting group."
     admins: tuple[str, ...] = ()
     "Specify one or more members to make a group admin, required if you're currently the only admin."
+
+
+@dataclass(frozen=True, kw_only=True)
+class Receive(RpcCommand[list[MessageOrError]]):
+    """
+    Query the server for new messages.
+
+    :param timeout: Number of seconds to wait for new messages (negative values disable timeout)
+    :param max_messages: Maximum number of messages to receive, before returning.
+    :param ignore_attachments: Don’t download attachments of received messages.
+    :param ignore_stories: Don’t receive story messages from the server.
+    :param send_read_receipts: Send read receipts for all incoming data messages (in
+        addition to the default delivery receipts)
+
+    *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ReceiveCommand.java)]*
+    """
+
+    timeout: str = 3.0
+    "Number of seconds to wait for new messages (negative values disable timeout)"
+    max_messages: int = -1
+    "Maximum number of messages to receive, before returning."
+    ignore_attachments: bool = False
+    "Don’t download attachments of received messages."
+    ignore_stories: bool = False
+    "Don’t receive story messages from the server."
+    send_read_receipts: bool = False
+    "Send read receipts for all incoming data messages (in addition to the default delivery receipts)"
+
+
+@dataclass(frozen=True, kw_only=True)
+class Register(RpcCommand[Empty]):
+    """
+    Register a phone number with SMS or voice verification.
+
+    :param voice: The verification should be done over voice, not SMS.
+    :param captcha: The captcha token, required if registration failed with a
+        captcha required error.
+    :param reregister: Register even if account is already registered
+
+    *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/RegisterCommand.java)]*
+    """
+
+    voice: bool = False
+    "The verification should be done over voice, not SMS."
+    captcha: str | None = None
+    "The captcha token, required if registration failed with a captcha required error."
+    reregister: bool = False
+    "Register even if account is already registered"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1048,22 +1121,43 @@ class UploadStickerPack(RpcCommand[UploadStickerPackResult]):
     "The path of the manifest.json or a zip file containing the sticker pack you wish to upload."
 
 
+@dataclass(frozen=True, kw_only=True)
+class Verify(RpcCommand[Empty]):
+    """
+    Verify the number using the code received via SMS or voice.
+
+    :param verification_code: The verification code you received via sms or voice call.
+    :param pin: The registration lock PIN, that was set by the user (Optional)
+
+    *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/a0d5744c4945791eb57436d0f1288b09bd41132a/src/main/java/org/asamk/signal/commands/VerifyCommand.java)]*
+    """
+
+    verification_code: str | None = None
+    "The verification code you received via sms or voice call."
+    pin: str | None = None
+    "The registration lock PIN, that was set by the user (Optional)"
+
+
 __all__ = [
     "AddDevice",
     "AddStickerPack",
     "Block",
+    "DeleteLocalAccountData",
     "FinishChangeNumber",
     "GetAttachment",
     "GetAvatar",
     "GetSticker",
     "GetUserStatus",
     "JoinGroup",
+    "ListAccounts",
     "ListContacts",
     "ListDevices",
     "ListGroups",
     "ListIdentities",
     "ListStickerPacks",
     "QuitGroup",
+    "Receive",
+    "Register",
     "RemoteDelete",
     "RemoveContact",
     "RemoveDevice",
@@ -1088,4 +1182,5 @@ __all__ = [
     "UpdateGroup",
     "UpdateProfile",
     "UploadStickerPack",
+    "Verify",
 ]

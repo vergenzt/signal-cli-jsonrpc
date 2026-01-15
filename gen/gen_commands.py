@@ -29,7 +29,7 @@ from .utils import (
 
 JAVA_COMMAND_FILES = sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/commands/*.java"))
 
-RPC_COMMAND_IFACE_NAME = "JsonRpcLocalCommand"
+RPC_COMMAND_IFACE_NAME = r"JsonRpc\w*Command"
 
 
 EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
@@ -440,6 +440,10 @@ def get_py_arg_decl(
                 java_arg_addl_calls = rest
             case {"required": "true", **rest}:
                 py_arg_can_be_none = False
+                java_arg_addl_calls = rest
+            case {"setDefault": default, **rest}:
+                py_arg_can_be_none = False
+                py_arg_value = a.Constant(a.literal_eval(default))
                 java_arg_addl_calls = rest
             case _:
                 raise ValueError(f"Don't know how to handle arg calls: {java_arg_addl_calls}")

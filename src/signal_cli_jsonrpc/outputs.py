@@ -2,7 +2,15 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Literal
 
-from .types import AttachmentData, Contact, SendMessageResult
+from signal_cli_jsonrpc.session import MessageOrError
+
+from .types import (
+    AttachmentData,
+    Contact,
+    FinishLinkParams,
+    SendMessageResult,
+    StickerPack,
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +105,7 @@ class UploadStickerPackResult:
 RPC_COMMAND_OUTPUT_TYPES = defaultdict(
     lambda: Empty,  # default
     {
+        "FinishLinkCommand": FinishLinkParams,
         "GetAttachment": AttachmentData,
         "GetAvatar": AttachmentData,
         "GetSticker": AttachmentData,
@@ -106,6 +115,8 @@ RPC_COMMAND_OUTPUT_TYPES = defaultdict(
         "ListDevices": list[Device],
         "ListGroups": list[Group],
         "ListIdentities": list[Identity],
+        "ListStickerPacks": list[StickerPack],
+        "Receive": list[MessageOrError],
         "UpdateGroup": UpdateGroupResult,
         "UploadStickerPack": UploadStickerPackResult,
     },
