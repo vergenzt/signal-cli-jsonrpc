@@ -37,6 +37,7 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
     {
         "Send": {"message_from_stdin"},
         "ListGroups": {"detailed"},
+        "ListContacts": {"detailed"},
     },
 )
 

@@ -223,7 +223,6 @@ class ListContacts(RpcCommand[list[Contact]]):
     :param blocked: Specify if only blocked or unblocked contacts should be shown
         (default: all contacts)
     :param name: Find contacts with the given contact or profile name.
-    :param detailed: List the contacts with more details. If output=json, then this is always set
     :param internal: Include internal information that's normally not user visible
 
     *[generated from [Java source](https://github.com/AsamK/signal-cli/blob/f2005593ecefd37c7e1666c2dc0c71b259271af0/src/main/java/org/asamk/signal/commands/ListContactsCommand.java)]*
@@ -237,8 +236,6 @@ class ListContacts(RpcCommand[list[Contact]]):
     "Specify if only blocked or unblocked contacts should be shown (default: all contacts)"
     name: str | None = None
     "Find contacts with the given contact or profile name."
-    detailed: bool = False
-    "List the contacts with more details. If output=json, then this is always set"
     internal: bool = False
     "Include internal information that's normally not user visible"
 
