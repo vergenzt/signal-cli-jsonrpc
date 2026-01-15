@@ -28,4 +28,7 @@ run = "ruff check"
 run = "ruff format"
 
 [[pre-commit.jobs]]
-run = "task check"
+run = "GIT_PAGER=cat task check"
+
+[[pre-commit.jobs]]
+run = "cog @.cogrc"

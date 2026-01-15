@@ -1,6 +1,14 @@
 [project]
 name = "signal-cli-jsonrpc"
-version = "0.1.0"
+
+#[[[cog
+#  from gen.utils import SIGNAL_CLI_PATH, sh
+#  signal_cli_version = sh("git describe --exact-match --tags".split(), cwd=SIGNAL_CLI_PATH, text=True).strip()
+#  print(f'version = "{signal_cli_version}"')
+#]]]
+version = "v0.13.20"
+#[[[end]]] (sum: rNrIsnrCuU)
+
 description = "Strongly typed Python dataclass interface to signal-cli's RPC commands"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -20,6 +28,7 @@ dev = [
     "yamlfix>=1.19.0",
     "lefthook>=2.0.3",
     "pre-commit-hooks>=6.0.0",
+    "cogapp>=3.6.0",
 ]
 
 [build-system]
