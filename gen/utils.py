@@ -5,7 +5,7 @@ from copy import copy, deepcopy
 from functools import partial
 from pathlib import Path
 from subprocess import check_output
-from textwrap import dedent, wrap
+from textwrap import dedent, indent, wrap
 from typing import Literal, Sequence
 
 sh = partial(check_output, text=True)
@@ -81,20 +81,19 @@ def py_dataclass_deco(py_imports: PyImports) -> a.expr:
 GIT_ROOT = Path(sh(["git", "rev-parse", "--show-toplevel"]).strip())
 
 
-def signal_submodule_config(key: str) -> str:
-    return sh(
-        [
-            "git",
-            "config",
-            "--file",
-            GIT_ROOT / ".gitmodules",
-            f"submodule.signal-cli.{key}",
-        ]
-    ).strip()
+def git_submodule_config(key: str) -> str:
+    return sh(["git", "config", "--file", GIT_ROOT / ".gitmodules", key]).strip()
 
 
-SIGNAL_CLI_PATH = GIT_ROOT / signal_submodule_config("path")
-SIGNAL_CLI_URL = signal_submodule_config("url")
+SIGNAL_CLI_PATH = GIT_ROOT / git_submodule_config("submodule.signal-cli.path")
+SIGNAL_CLI_URL = git_submodule_config("submodule.signal-cli.url")
+
+
+def normalize_docstring(docstr: str) -> str:
+    if "\n" in docstr:
+        return indent("\n" + dedent(docstr).strip(), "    ") + "\n    "
+    else:
+        return docstr
 
 
 def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
@@ -103,14 +102,16 @@ def annotate_source(py_decl: a.ClassDef, src: Path) -> a.ClassDef:
     src_rel = src.relative_to(SIGNAL_CLI_PATH)
     src_sha = sh(["git", "rev-list", "-1", "HEAD", "--", src_rel], cwd=SIGNAL_CLI_PATH).strip()
     src_url = f"{SIGNAL_CLI_URL}/blob/{src_sha}/{src_rel}"
-    src_doc = "\n".join(("", "Source:", src_url, ""))
+    src_doc = f"*[generated from [Java source]({src_url})]*"
 
     py_decl = deepcopy(py_decl)
     match py_decl.body:
         case [a.Expr(a.Constant(str() as docstring)), *_]:
-            py_decl.body[0] = a.Expr(a.Constant(dedent(docstring) + src_doc))
+            py_decl.body[0] = a.Expr(
+                a.Constant(normalize_docstring(dedent(docstring).strip() + "\n\n" + src_doc))
+            )
         case _:
-            py_decl.body.insert(0, a.Expr(a.Constant(src_doc)))
+            py_decl.body.insert(0, a.Expr(a.Constant(normalize_docstring(src_doc))))
 
     return py_decl
 

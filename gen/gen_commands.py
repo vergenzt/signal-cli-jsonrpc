@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import reduce
 from itertools import product, takewhile
 from operator import or_
-from textwrap import dedent, indent
+from textwrap import dedent
 from typing import Iterator, cast, get_args, get_origin
 
 from ast_grep_py import SgNode, SgRoot
@@ -12,7 +12,7 @@ from caseutil import to_snake
 from ordered_set import OrderedSet
 
 import signal_cli_jsonrpc
-from signal_cli_jsonrpc.rpc_command_outputs import RPC_COMMAND_OUTPUT_TYPES
+from signal_cli_jsonrpc.outputs import RPC_COMMAND_OUTPUT_TYPES
 
 from .utils import (
     SIGNAL_CLI_PATH,
@@ -21,6 +21,7 @@ from .utils import (
     gen_py_src,
     human_str_list,
     make_required,
+    normalize_docstring,
     py_dataclass_deco,
     rewrap,
     val,
@@ -35,6 +36,7 @@ EXCLUDED_ARGS: dict[str, set[str]] = defaultdict(
     set,
     {
         "Send": {"message_from_stdin"},
+        "ListGroups": {"detailed"},
     },
 )
 
@@ -47,10 +49,6 @@ def main():
 
 def gen() -> a.Module:
     py_imports = PyImports()
-
-    py_consts: list[a.stmt] = [
-        a.parse("type NonEmptyTuple[T] = tuple[T, *tuple[T, ...]]").body[0],
-    ]
 
     py_decls = [
         annotate_source(py_decl, file)
@@ -65,10 +63,13 @@ def gen() -> a.Module:
         a.ImportFrom(mod, [a.alias(n) for n in names], level=0) for mod, names in py_imports.items()
     ]
 
+    py_all = a.List([a.Constant(py_decl.name) for py_decl in py_decls])
+    py_all_decl = a.Assign([a.Name("__all__")], py_all, lineno=0)
+
     py_body = list[a.stmt]()
     py_body.extend(py_import_decls)
-    py_body.extend(py_consts)
     py_body.extend(py_decls)
+    py_body.append(py_all_decl)
     return a.Module(py_body)
 
 
@@ -101,10 +102,9 @@ def get_py_decl(java_class_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef 
     py_class_decl = a.ClassDef(
         decorator_list=[py_dataclass_deco(py_imports)],
         name=py_name,
-        bases=[py_imports.add(".rpc_session", "RpcCommand")],
-        keywords=[
-            a.keyword(
-                "rpc_output_type",
+        bases=[
+            a.Subscript(
+                py_imports.add(".session", "RpcCommand"),
                 a.parse(output_type_unqualified, mode="eval").body,
             )
         ],
@@ -220,7 +220,10 @@ def get_py_class_body(
         yield py_class_doc
 
     # emit the argument (i.e. dataclass field) definitions
-    yield from (py_args[name] for name in py_arg_names_ordered)
+    for name in py_arg_names_ordered:
+        yield py_args[name]
+        if name in py_arg_helps:
+            yield a.Expr(a.Constant(py_arg_helps[name]))
 
     # if there are mutex groups, then:
     #  a) overload __init__ methods to provide type hints, and
@@ -271,8 +274,8 @@ def get_py_class_docstring(
             )
             help_paras.append(py_args_help)
 
-        py_class_help = "\n" + "\n\n".join(filter(None, help_paras)) + "\n"
-        return a.Expr(a.Constant(indent(py_class_help, " " * 4) + " " * 4))
+        py_class_help = normalize_docstring("\n\n".join(filter(None, help_paras)))
+        return a.Expr(a.Constant(py_class_help))
 
 
 def get_py_class_init_overloads(
@@ -409,7 +412,7 @@ def get_py_arg_decl(
             case {"choices": choices, **rest}:
                 py_arg_annot = a.Subscript(
                     py_imports.add("typing", "Literal"),
-                    a.Constant(a.literal_eval(choices)),
+                    a.Tuple([a.Constant(choice) for choice in a.literal_eval(choices)]),
                 )
                 java_arg_addl_calls = rest
             case {"type": type, **rest}:
@@ -431,7 +434,7 @@ def get_py_arg_decl(
                 java_arg_addl_calls = rest
             case {"nargs": '"+"', **rest}:
                 py_arg_name += "s"
-                py_arg_annot = a.Subscript(a.Name("NonEmptyTuple"), py_arg_annot)
+                py_arg_annot = a.Subscript(py_imports.add(".utils", "NonEmptyTuple"), py_arg_annot)
                 py_arg_can_be_none = False
                 java_arg_addl_calls = rest
             case {"required": "true", **rest}:

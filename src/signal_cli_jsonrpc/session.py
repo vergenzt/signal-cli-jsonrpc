@@ -2,7 +2,8 @@ import json
 import os
 from abc import ABCMeta
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Self
+from types import GenericAlias
+from typing import TYPE_CHECKING, Any, AsyncIterator, Self
 from uuid import uuid7
 
 from aiohttp import ClientSession
@@ -11,21 +12,52 @@ from attr import field
 from caseutil import to_camel, to_snake
 from dacite import from_dict
 
-from .rpc_types import Error, MessageEnvelope
+from .outputs import Empty
+from .types import Error, MessageEnvelope
+from .utils import dict_transform_keys
 
 
-class RpcCommandMeta[T](ABCMeta):
-    rpc_method: str
-    rpc_output_type: type[T]
+class _RpcCommandMeta[OutputType](ABCMeta):
+    _rpc_method_name: str
+    _rpc_output_type: type[OutputType]
 
-    def __init__(cls, rpc_output_type: type[T]):
-        cls.rpc_method = cls.__name__[0].upper() + cls.__name__[1:]
-        cls.rpc_output_type = rpc_output_type
+    def __init__(cls, name: str, bases: tuple[type, ...], nsp: dict[str, Any], /, **kw: Any):
+        match cls:
+            # no type var needed to create RpcCommand base class
+            case type(__name__="RpcCommand"):
+                pass
+
+            # but for all others, expect base class to be passed as `RpcCommand[<output_type>]`
+            case type(
+                __name__=rpc_method_name_pascal,
+                __orig_bases__=[
+                    GenericAlias(
+                        __origin__=_RpcCommandMeta(),  # instance of `_RpcCommandMeta`, i.e. `RpcCommand` itself
+                        __args__=[OutputType],
+                    )
+                ],
+            ):
+                cls._rpc_method_name = (
+                    rpc_method_name_pascal[0].lower() + rpc_method_name_pascal[1:]
+                )
+                cls._rpc_output_type = OutputType
+
+            case name, (base, *_):
+                breakpoint()
+                raise TypeError(f"Cannot create {cls} as subclass of {base} without generic arg!")
+
+        return super().__init__(name, bases, nsp, **kw)
 
 
 @dataclass(frozen=True)
-class RpcCommand(metaclass=RpcCommandMeta):
-    """Abstract base class for RPC commands. Subclasses must pass `rpc_output_type` parameter."""
+class RpcCommand[OutputType = Empty](metaclass=_RpcCommandMeta):
+    """Abstract base class for RPC commands. Subclasses must specify `OutputType` type parameter."""
+
+    async def do(self, session: SignalCliRPCSession) -> RpcResponse[OutputType]:
+        return await session.rpc(self)
+
+    async def get(self, session: SignalCliRPCSession) -> OutputType:
+        return await session.rpc_output(self)
 
 
 @dataclass(frozen=True)
@@ -50,13 +82,6 @@ class RpcResponseError(Exception):
 type RpcResponse[T] = RpcResponseOk[T] | RpcResponseError
 
 type RpcMessage = RpcRequest | RpcResponse | list[RpcMessage]
-
-
-def dict_transform_keys(transform: Callable[[str], str], dct: dict[str, Any]) -> dict[str, Any]:
-    return {
-        transform(k): (dict_transform_keys(transform, v) if isinstance(v, dict) else v)
-        for k, v in dct.items()
-    }
 
 
 @dataclass(frozen=True)
@@ -96,7 +121,7 @@ class SignalCliRPCSession(ClientSession):
                 yield signal_event
 
     async def rpc[OutputT](self, command: RpcCommand[OutputT]) -> RpcResponse[OutputT]:
-        request = RpcRequest(command.rpc_method, command)
+        request = RpcRequest(command._rpc_method_name, command)
         response_obj = await self.post("rpc", json=dict_transform_keys(to_camel, asdict(request)))
         response_dict = dict_transform_keys(to_snake, await response_obj.json())
         output_type = command.rpc_output_type

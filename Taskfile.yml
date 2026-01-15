@@ -6,17 +6,17 @@ vars:
 tasks:
   default:
     deps:
-    - rpc_types
-    - rpc_commands
+    - gen_types
+    - gen_commands
 
   check:
     cmds:
-    - python -m gen.gen_rpc_types | git diff --no-index -w -- src/{{.PKG_NAME}}/rpc_types.py -
-    - python -m gen.gen_rpc_commands | git diff --no-index -w -- src/{{.PKG_NAME}}/rpc_commands.py -
+    - python -m gen.gen_types | git diff --no-index -w -- src/{{.PKG_NAME}}/types.py -
+    - python -m gen.gen_commands | git diff --no-index -w -- src/{{.PKG_NAME}}/commands.py -
 
-  rpc_types: >
-    python -m gen.gen_rpc_types > ${tmp:=$(mktemp -u)}
-    && mv "$tmp" src/{{.PKG_NAME}}/rpc_types.py
-  rpc_commands: >
-    python -m gen.gen_rpc_commands > ${tmp:=$(mktemp -u)}
-    && mv "$tmp" src/{{.PKG_NAME}}/rpc_commands.py
+  gen_types: >
+    python -m gen.gen_types > ${tmp:=$(mktemp -u)}
+    && mv "$tmp" src/{{.PKG_NAME}}/types.py
+  gen_commands: >
+    python -m gen.gen_commands > ${tmp:=$(mktemp -u)}
+    && mv "$tmp" src/{{.PKG_NAME}}/commands.py

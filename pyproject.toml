@@ -32,6 +32,7 @@ dev = [
     "lefthook>=2.0.3",
     "pre-commit-hooks>=6.0.0",
     "cogapp>=3.6.0",
+    "pdoc>=16.0.0",
 ]
 
 [build-system]

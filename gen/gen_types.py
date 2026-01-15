@@ -1,9 +1,11 @@
 import ast as a
 from textwrap import dedent
+from typing import Iterator
 
 from ast_grep_py import SgNode, SgRoot
 from caseutil import to_snake
 
+from .gen_commands import JAVA_COMMAND_FILES
 from .utils import (
     SIGNAL_CLI_PATH,
     PyImports,
@@ -13,7 +15,10 @@ from .utils import (
     val,
 )
 
-JAVA_JSON_TYPE_FILES = sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/json/*.java"))
+JAVA_JSON_TYPE_FILES = [
+    *sorted(SIGNAL_CLI_PATH.glob("src/main/java/org/asamk/signal/json/*.java")),
+    *JAVA_COMMAND_FILES,
+]
 
 
 def main():
@@ -31,28 +36,29 @@ def gen() -> a.Module:
         if (java_prog_n := SgRoot(file.read_text(), "java").root())
         for java_n in java_prog_n.children()
         if java_n.kind() not in ("package_declaration", "import_declaration")
-        if (py_decl := get_py_decl(java_n, py_imports))
+        for py_decl in get_py_decls(java_n, py_imports)
     ]
 
     py_import_decls = [
         a.ImportFrom(mod, [a.alias(n) for n in names], level=0) for mod, names in py_imports.items()
     ]
 
+    py_all = a.List([a.Constant(py_decl.name) for py_decl in py_decls])
+    py_all_decl = a.Assign([a.Name("__all__")], py_all, lineno=0)
+
     py_body = list[a.stmt]()
     py_body.extend(py_import_decls)
     py_body.extend(py_decls)
+    py_body.append(py_all_decl)
     return a.Module(py_body)
 
 
-def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None:
-    py_type_decos = tuple[a.expr]()
-    py_type_name = val(java_decl_n.field("name")).text().removeprefix("Json")
-    py_bases = tuple[a.expr]()
-    py_body = tuple[a.stmt]()
-
+def get_py_decls(java_decl_n: SgNode, py_imports: PyImports) -> Iterator[a.ClassDef]:
     match java_decl_n.kind():
         case "record_declaration":
+            py_type_name = val(java_decl_n.field("name")).text().removeprefix("Json")
             py_type_decos = (py_dataclass_deco(py_imports),)
+            py_bases = tuple[a.expr]()
 
             java_params = list(
                 filter(SgNode.is_named, val(java_decl_n.field("parameters")).children())
@@ -77,15 +83,21 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None
                 for decl in (py_param, *extra_decls)
             )
             if java_decl_body := java_decl_n.field("body"):
-                py_body = py_body + tuple(
-                    py_decl
-                    for decl in java_decl_body.children()
-                    if decl.kind().removesuffix("_declaration") in ("record", "enum")
-                    if (py_decl := get_py_decl(decl, py_imports))
+                py_body += tuple(
+                    decl
+                    for child in java_decl_body.children()
+                    for decl in get_py_decls(child, py_imports)
                 )
 
+            yield a.ClassDef(
+                decorator_list=list(py_type_decos),
+                name=py_type_name,
+                bases=list(py_bases),
+                body=list(py_body),
+            )
+
         case "enum_declaration":
-            py_type_decos = ()
+            py_type_name = val(java_decl_n.field("name")).text().removeprefix("Json")
             py_bases = (py_imports.add("enum", "StrEnum"),)
             py_body = tuple(
                 a.Assign(
@@ -97,24 +109,18 @@ def get_py_decl(java_decl_n: SgNode, py_imports: PyImports) -> a.ClassDef | None
                 if enum_member.kind() == "enum_constant"
             )
 
-        case "class_declaration":
-            pass
-
-        case _:
-            raise NotImplementedError(
-                f"Unhandled declaration type `{java_decl_n.kind()}`: {java_decl_n.text()}"
+            yield a.ClassDef(
+                name=py_type_name,
+                bases=list(py_bases),
+                body=list(py_body),
             )
 
-    return (
-        a.ClassDef(
-            decorator_list=list(py_type_decos),
-            name=py_type_name,
-            bases=list(py_bases),
-            body=list(py_body),
-        )
-        if py_body
-        else None
-    )
+        case _ if java_decl_body := java_decl_n.field("body"):
+            for java_decl in java_decl_body.children():
+                yield from get_py_decls(java_decl, py_imports)
+
+        case _:
+            pass
 
 
 def get_py_param_decl(
@@ -190,6 +196,11 @@ def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> a.expr:
                     a.Name("tuple"),
                     a.Tuple([get_py_type(java_gentypeparam_n, py_imports), a.Constant(...)]),
                 )
+            case "Set":
+                return a.Subscript(
+                    a.Name("set"),
+                    get_py_type(java_gentypeparam_n, py_imports),
+                )
             case _:
                 raise NotImplementedError(f"Unhandled Java generic type: {java_gentype_s}")
 
@@ -199,7 +210,7 @@ def get_py_type(java_type_n: SgNode, py_imports: PyImports) -> a.expr:
                 py_type_n = a.Name("str")
             case "int" | "long" | "Integer" | "Long":
                 py_type_n = a.Name("int")
-            case "Float":
+            case "Float" | "Double":
                 py_type_n = a.Name("float")
             case "boolean" | "Boolean":
                 py_type_n = a.Name("bool")

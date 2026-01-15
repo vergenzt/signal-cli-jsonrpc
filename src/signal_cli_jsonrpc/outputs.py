@@ -1,18 +1,23 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from signal_cli_jsonrpc.rpc_types import AttachmentData, Contact, SendMessageResult
+from typing import Literal
+
+from .types import AttachmentData, Contact, SendMessageResult
 
 
-# signal-cli returns `{}` in `result` for these commands so this mirrors that.
-# ref: https://github.com/AsamK/signal-cli/blob/3b784aa32be92b448d93fafb1cbe0727ad1d24eb/src/main/java/org/asamk/signal/jsonrpc/SignalJsonRpcCommandHandler.java#L275
-@dataclass
+@dataclass(frozen=True)
 class Empty:
     """
     Output type for commands which produce no output.
+
+    (Technically, `signal-cli` [returns an empty object (`{}`)]([1]) in the `result` field for these
+    commands so this object mirrors that.)
+
+    [[1]]: https://github.com/AsamK/signal-cli/blob/3b784aa32be92b448d93fafb1cbe0727ad1d24eb/src/main/java/org/asamk/signal/jsonrpc/SignalJsonRpcCommandHandler.java#L275
     """
 
 
-@dataclass
+@dataclass(frozen=True)
 class UserStatus:
     recipient: str
     number: str | None
@@ -21,7 +26,7 @@ class UserStatus:
     is_Registered: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class JoinGroupResult:
     timestamp: int
     results: list[SendMessageResult]
@@ -30,6 +35,34 @@ class JoinGroupResult:
 
 
 @dataclass
+class GroupMember:
+    number: str
+    uuid: str
+
+
+type GroupPermission = Literal["EVERY_MEMBER", "ONLY_ADMINS"]
+
+
+@dataclass(frozen=True)
+class Group:
+    id: str
+    name: str
+    description: str | None
+    is_member: bool
+    is_blocked: bool
+    message_expiration_time: int
+    members: list[GroupMember]
+    pending_members: list[GroupMember]
+    requesting_members: list[GroupMember]
+    admins: list[GroupMember]
+    banned: list[GroupMember]
+    permission_add_member: GroupPermission
+    permission_edit_details: GroupPermission
+    permission_send_message: GroupPermission
+    group_invite_link: str | None
+
+
+@dataclass(frozen=True)
 class Device:
     id: int
     name: str
@@ -37,7 +70,7 @@ class Device:
     last_seen_timestamp: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Identity:
     number: str
     uuid: str
@@ -48,14 +81,14 @@ class Identity:
     added_timestamp: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class UpdateGroupResult:
     timestamp: int | None = None
     results: list[SendMessageResult] = field(default_factory=list)
     group_id: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class UploadStickerPackResult:
     url: str
 
@@ -71,6 +104,7 @@ RPC_COMMAND_OUTPUT_TYPES = defaultdict(
         "JoinGroup": JoinGroupResult,
         "ListContacts": list[Contact],
         "ListDevices": list[Device],
+        "ListGroups": list[Group],
         "ListIdentities": list[Identity],
         "UpdateGroup": UpdateGroupResult,
         "UploadStickerPack": UploadStickerPackResult,
