@@ -4,10 +4,13 @@ name = "signal-cli-jsonrpc"
 #[[[cog
 #  from gen.utils import SIGNAL_CLI_PATH, sh
 #  signal_cli_version = sh("git describe --exact-match --tags".split(), cwd=SIGNAL_CLI_PATH, text=True).strip()
-#  print(f'version = "{signal_cli_version}"')
+#  import tomllib
+#  gen_version = tomllib.loads(cog.previous)["version"].split(".")[-1].removeprefix("dev")
+#  full_version = f"{signal_cli_version}.dev{gen_version}"
+#  print(f'version = "{full_version}"')
 #]]]
-version = "v0.13.20"
-#[[[end]]] (sum: rNrIsnrCuU)
+version = "v0.13.20.dev1"
+#[[[end]]]
 
 description = "Strongly typed Python dataclass interface to signal-cli's RPC commands"
 readme = "README.md"
